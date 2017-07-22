@@ -308,7 +308,7 @@ namespace Noikoio.RegexBot
             if (targetName == "_")
             {
                 if (et == EntityType.Channel) return m.Channel;
-                else return await m.Author.CreateDMChannelAsync();
+                else return await m.Author.GetOrCreateDMChannelAsync();
             }
 
             EntityName ei = new EntityName(targetName, et);
@@ -340,7 +340,7 @@ namespace Noikoio.RegexBot
                 if (ei.Id.HasValue)
                 {
                     // The easy way
-                    return await _client.GetUser(ei.Id.Value).CreateDMChannelAsync();
+                    return await _client.GetUser(ei.Id.Value).GetOrCreateDMChannelAsync();
                 }
 
                 // The hard way
@@ -350,7 +350,7 @@ namespace Noikoio.RegexBot
                         string.Equals(ei.Name, u.Nickname, StringComparison.OrdinalIgnoreCase))
                     {
                         ei.UpdateId(u.Id); // As mentioned above, serves only to trigger the suggestion log
-                        return await u.CreateDMChannelAsync();
+                        return await u.GetOrCreateDMChannelAsync();
                     }
                 }
             }
