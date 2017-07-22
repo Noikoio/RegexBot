@@ -1,18 +1,17 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Noikoio.RegexBot.ConfigItem;
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot
+namespace Noikoio.RegexBot.Feature.RegexResponder
 {
     // Contains code for handling each response in a rule.
-    partial class RuleResponder
+    partial class RegexResponder
     {
-        private delegate Task ResponseProcessor(AsyncLogger l, string cmd, Rule r, SocketMessage m);
+        private delegate Task ResponseProcessor(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m);
         private readonly ReadOnlyDictionary<string, ResponseProcessor> _commands;
 
 #if DEBUG
@@ -20,7 +19,7 @@ namespace Noikoio.RegexBot
         /// Throws an exception. Meant to be a quick error handling test.
         /// No parameters.
         /// </summary>
-        private async Task RP_Crash(AsyncLogger l, string cmd, Rule r, SocketMessage m)
+        private async Task RP_Crash(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
         {
             await l("Will throw an exception.");
             throw new Exception("Requested in response.");
@@ -31,7 +30,7 @@ namespace Noikoio.RegexBot
         /// The guild info displayed is the one in which the command is invoked.
         /// No parameters.
         /// </summary>
-        private Task RP_DumpID(AsyncLogger l, string cmd, Rule r, SocketMessage m)
+        private Task RP_DumpID(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
         {
             var g = ((SocketGuildUser)m.Author).Guild;
             var result = new StringBuilder();
@@ -56,7 +55,7 @@ namespace Noikoio.RegexBot
         /// Sends a message to a specified channel.
         /// Parameters: say (channel) (message)
         /// </summary>
-        private async Task RP_Say(AsyncLogger l, string cmd, Rule r, SocketMessage m)
+        private async Task RP_Say(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
         {
             string[] @in = SplitParams(cmd, 3);
             if (@in.Length != 3)
@@ -81,7 +80,7 @@ namespace Noikoio.RegexBot
         /// Reports the incoming message to a given channel.
         /// Parameters: report (channel)
         /// </summary>
-        private async Task RP_Report(AsyncLogger l, string cmd, Rule r, SocketMessage m)
+        private async Task RP_Report(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
         {
             string[] @in = SplitParams(cmd);
             if (@in.Length != 2)
@@ -137,7 +136,7 @@ namespace Noikoio.RegexBot
         /// Deletes the incoming message.
         /// No parameters.
         /// </summary>
-        private async Task RP_Remove(AsyncLogger l, string cmd, Rule r, SocketMessage m)
+        private async Task RP_Remove(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
         {
             // Parameters are not checked
             await m.DeleteAsync();
@@ -147,7 +146,7 @@ namespace Noikoio.RegexBot
         /// Executes an external program and sends standard output to the given channel.
         /// Parameters: exec (channel) (command line)
         /// </summary>
-        private async Task RP_Exec(AsyncLogger l, string cmd, Rule r, SocketMessage m)
+        private async Task RP_Exec(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
         {
             var @in = SplitParams(cmd, 4);
             if (@in.Length < 3)
@@ -198,7 +197,7 @@ namespace Noikoio.RegexBot
         /// No parameters.
         /// </summary>
         // TODO add parameter for message auto-deleting
-        private async Task RP_Ban(AsyncLogger l, string cmd, Rule r, SocketMessage m)
+        private async Task RP_Ban(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
         {
             SocketGuild g = ((SocketGuildUser)m.Author).Guild;
             await g.AddBanAsync(m.Author);
@@ -208,7 +207,7 @@ namespace Noikoio.RegexBot
         /// Grants or revokes a specified role to/from a given user.
         /// Parameters: grantrole/revokerole (user ID or @_) (role ID)
         /// </summary>
-        private async Task RP_GrantRevokeRole(AsyncLogger l, string cmd, Rule r, SocketMessage m)
+        private async Task RP_GrantRevokeRole(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
         {
             string[] @in = SplitParams(cmd);
             if (@in.Length != 3)

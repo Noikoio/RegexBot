@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Noikoio.RegexBot.Feature.RegexResponder;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Noikoio.RegexBot.ConfigItem
@@ -10,17 +11,17 @@ namespace Noikoio.RegexBot.ConfigItem
     {
         private readonly string _name;
         private ulong? _id;
-        private IEnumerable<Rule> _rules;
+        private IEnumerable<RuleConfig> _rules;
         private EntityList _moderators;
 
         public string Name => _name;
         public ulong? Id {
             get => _id; set { if (!_id.HasValue) _id = value; }
         }
-        public IEnumerable<Rule> MatchResponseRules => _rules;
+        public IEnumerable<RuleConfig> MatchResponseRules => _rules;
         public EntityList Moderators => _moderators;
 
-        public Server(string name, ulong? id, IEnumerable<Rule> rules, EntityList moderators)
+        public Server(string name, ulong? id, IEnumerable<RuleConfig> rules, EntityList moderators)
         {
             _name = name;
             _id = id;

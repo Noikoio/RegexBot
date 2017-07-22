@@ -147,7 +147,7 @@ namespace Noikoio.RegexBot
 
                 // Read rules
                 // Also, parsed rules require a server reference. Creating it here.
-                List<Rule> rules = new List<Rule>();
+                List<RuleConfig> rules = new List<RuleConfig>();
                 Server newserver = new Server(sname, sid, rules, mods);
 
                 foreach (JObject ruleconf in sconf["rules"])
@@ -161,11 +161,11 @@ namespace Noikoio.RegexBot
                     }
                     await SLog($"Adding rule \"{name}\"");
 
-                    Rule rule;
+                    RuleConfig rule;
                     try
                     {
-                        rule = new Rule(newserver, ruleconf);
-                    } catch (Rule.RuleImportException ex)
+                        rule = new RuleConfig(newserver, ruleconf);
+                    } catch (RuleConfig.RuleImportException ex)
                     {
                         await SLog("-> Error: " + ex.Message);
                         return false;

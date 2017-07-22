@@ -8,17 +8,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot
+namespace Noikoio.RegexBot.Feature.RegexResponder
 {
     /// <summary>
-    /// Bot subsystem that implements regex matching and response processing.
+    /// Implements per-message regex matching and executes customizable responses.
+    /// Namesake of this project.
     /// </summary>
-    partial class RuleResponder
+    partial class EventProcessor
     {
         private readonly DiscordSocketClient _client;
         private readonly ConfigLoader _conf;
 
-        public RuleResponder(DiscordSocketClient client, ConfigLoader conf)
+        public EventProcessor(DiscordSocketClient client, ConfigLoader conf)
         {
             _client = client;
             _conf = conf;
@@ -98,7 +99,7 @@ namespace Noikoio.RegexBot
         /// Uses information from a single rule and checks if the incoming message is a match.
         /// If it matches, the rule's responses are executed. To be run in the thread pool.
         /// </summary>
-        private async Task ProcessMessage(Server srv, Rule rule, SocketMessage msg)
+        private async Task ProcessMessage(Server srv, RuleConfig rule, SocketMessage msg)
         {
             string msgcontent;
 
@@ -182,7 +183,7 @@ namespace Noikoio.RegexBot
             return result.ToString();
         }
         
-        private bool IsFiltered(Rule r, SocketMessage m)
+        private bool IsFiltered(RuleConfig r, SocketMessage m)
         {
             if (r.FilterMode == FilterType.None) return false;
 

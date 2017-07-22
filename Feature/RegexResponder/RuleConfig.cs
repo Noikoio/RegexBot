@@ -1,15 +1,16 @@
 ﻿using Newtonsoft.Json.Linq;
+using Noikoio.RegexBot.ConfigItem;
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Noikoio.RegexBot.ConfigItem
+namespace Noikoio.RegexBot.Feature.RegexResponder
 {
     /// <summary>
     /// Represents configuration for a single rule.
     /// </summary>
     [System.Diagnostics.DebuggerDisplay("Rule: {DisplayName}")]
-    internal struct Rule
+    internal struct RuleConfig
     {
         private string _displayName;
         private Server _server;
@@ -42,7 +43,7 @@ namespace Noikoio.RegexBot.ConfigItem
         /// <exception cref="RuleImportException>">
         /// Thrown when encountering a missing or invalid value.
         /// </exception>
-        public Rule(Server serverref, JObject ruleconf)
+        public RuleConfig(Server serverref, JObject ruleconf)
         {
             _server = serverref;
 

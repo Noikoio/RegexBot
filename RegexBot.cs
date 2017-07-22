@@ -12,8 +12,8 @@ namespace Noikoio.RegexBot
     {
         private readonly ConfigLoader _config;
         private readonly DiscordSocketClient _client;
-        private readonly RuleResponder _responder;
 
+        // Constructor loads all subsystems. Subsystem constructors hook up their event delegates.
         internal RegexBot(ConfigLoader conf)
         {
             _client = new DiscordSocketClient(new DiscordSocketConfig()
@@ -24,8 +24,11 @@ namespace Noikoio.RegexBot
             });
             _config = conf;
 
+            // Hook up handlers for basic functions
             _client.Connected += _client_Connected;
-            _responder = new RuleResponder(_client, _config);
+
+            // Initialize features
+            new Feature.RegexResponder.EventProcessor(_client, _config);
         }
         
         internal async Task Start()
