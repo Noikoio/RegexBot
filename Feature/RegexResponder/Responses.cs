@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Noikoio.RegexBot.Feature.RegexResponder
 {
     // Contains code for handling each response in a rule.
-    partial class RegexResponder
+    partial class EventProcessor
     {
         private delegate Task ResponseProcessor(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m);
         private readonly ReadOnlyDictionary<string, ResponseProcessor> _commands;

@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
+using Noikoio.RegexBot.Feature.RegexResponder;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -165,7 +166,7 @@ namespace Noikoio.RegexBot
                     try
                     {
                         rule = new RuleConfig(newserver, ruleconf);
-                    } catch (RuleConfig.RuleImportException ex)
+                    } catch (RuleImportException ex)
                     {
                         await SLog("-> Error: " + ex.Message);
                         return false;

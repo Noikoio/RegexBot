@@ -75,7 +75,7 @@ namespace Noikoio.RegexBot.ConfigItem
             if (section["blacklist"] != null)
             {
                 if (mode == FilterType.Whitelist)
-                    throw new RuleConfig.RuleImportException("Cannot have whitelist AND blacklist defined.");
+                    throw new RuleImportException("Cannot have whitelist AND blacklist defined.");
                 mode = FilterType.Blacklist;
             }
             if (mode == FilterType.None) list = new EntityList(); // might even be fine to keep it null?

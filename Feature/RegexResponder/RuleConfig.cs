@@ -147,15 +147,5 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             bool? embedmode = ruleconf["MatchEmbeds"]?.Value<bool>();
             _matchEmbeds = (embedmode.HasValue && embedmode == true);
         }
-
-        /// <summary>
-        /// Exception thrown during an attempt to read rule configuration.
-        /// </summary>
-        public class RuleImportException : Exception
-        {
-            public RuleImportException(string message) : base(message) { }
-        }
     }
-    
-    
 }
