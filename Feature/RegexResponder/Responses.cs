@@ -11,7 +11,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
     // Contains code for handling each response in a rule.
     partial class EventProcessor
     {
-        private delegate Task ResponseProcessor(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m);
+        private delegate Task ResponseProcessor(string cmd, RuleConfig r, SocketMessage m);
         private readonly ReadOnlyDictionary<string, ResponseProcessor> _commands;
 
 #if DEBUG
@@ -19,9 +19,8 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// Throws an exception. Meant to be a quick error handling test.
         /// No parameters.
         /// </summary>
-        private async Task RP_Crash(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
+        private Task RP_Crash(string cmd, RuleConfig r, SocketMessage m)
         {
-            await l("Will throw an exception.");
             throw new Exception("Requested in response.");
         }
 
@@ -30,7 +29,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// The guild info displayed is the one in which the command is invoked.
         /// No parameters.
         /// </summary>
-        private Task RP_DumpID(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
+        private Task RP_DumpID(string cmd, RuleConfig r, SocketMessage m)
         {
             var g = ((SocketGuildUser)m.Author).Guild;
             var result = new StringBuilder();
@@ -55,19 +54,19 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// Sends a message to a specified channel.
         /// Parameters: say (channel) (message)
         /// </summary>
-        private async Task RP_Say(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
+        private async Task RP_Say(string cmd, RuleConfig r, SocketMessage m)
         {
             string[] @in = SplitParams(cmd, 3);
             if (@in.Length != 3)
             {
-                await l("Error: say: Incorrect number of parameters.");
+                await Log("Error: say: Incorrect number of parameters.");
                 return;
             }
 
             var target = await GetMessageTargetAsync(@in[1], m);
             if (target == null)
             {
-                await l("Error: say: Unable to resolve given target.");
+                await Log("Error: say: Unable to resolve given target.");
                 return;
             }
 
@@ -80,19 +79,19 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// Reports the incoming message to a given channel.
         /// Parameters: report (channel)
         /// </summary>
-        private async Task RP_Report(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
+        private async Task RP_Report(string cmd, RuleConfig r, SocketMessage m)
         {
             string[] @in = SplitParams(cmd);
             if (@in.Length != 2)
             {
-                await l("Error: report: Incorrect number of parameters.");
+                await Log("Error: report: Incorrect number of parameters.");
                 return;
             }
 
             var target = await GetMessageTargetAsync(@in[1], m);
             if (target == null)
             {
-                await l("Error: report: Unable to resolve given target.");
+                await Log("Error: report: Unable to resolve given target.");
                 return;
             }
 
@@ -136,7 +135,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// Deletes the incoming message.
         /// No parameters.
         /// </summary>
-        private async Task RP_Remove(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
+        private async Task RP_Remove(string cmd, RuleConfig r, SocketMessage m)
         {
             // Parameters are not checked
             await m.DeleteAsync();
@@ -146,19 +145,19 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// Executes an external program and sends standard output to the given channel.
         /// Parameters: exec (channel) (command line)
         /// </summary>
-        private async Task RP_Exec(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
+        private async Task RP_Exec(string cmd, RuleConfig r, SocketMessage m)
         {
             var @in = SplitParams(cmd, 4);
             if (@in.Length < 3)
             {
-                await l("exec: Incorrect number of parameters.");
+                await Log("exec: Incorrect number of parameters.");
             }
 
             string result;
             var target = await GetMessageTargetAsync(@in[1], m);
             if (target == null)
             {
-                await l("Error: exec: Unable to resolve given channel.");
+                await Log("Error: exec: Unable to resolve given channel.");
                 return;
             }
 
@@ -174,7 +173,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
                 p.WaitForExit(5000); // waiting at most 5 seconds
                 if (p.HasExited)
                 {
-                    if (p.ExitCode != 0) await l("exec: Process returned exit code " + p.ExitCode);
+                    if (p.ExitCode != 0) await Log("exec: Process returned exit code " + p.ExitCode);
                     using (var stdout = p.StandardOutput)
                     {
                         result = await stdout.ReadToEndAsync();
@@ -182,7 +181,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
                 }
                 else
                 {
-                    await l("exec: Process is taking too long to exit. Killing process.");
+                    await Log("exec: Process is taking too long to exit. Killing process.");
                     p.Kill();
                     return;
                 }
@@ -197,7 +196,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// No parameters.
         /// </summary>
         // TODO add parameter for message auto-deleting
-        private async Task RP_Ban(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
+        private async Task RP_Ban(string cmd, RuleConfig r, SocketMessage m)
         {
             SocketGuild g = ((SocketGuildUser)m.Author).Guild;
             await g.AddBanAsync(m.Author);
@@ -207,17 +206,17 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// Grants or revokes a specified role to/from a given user.
         /// Parameters: grantrole/revokerole (user ID or @_) (role ID)
         /// </summary>
-        private async Task RP_GrantRevokeRole(AsyncLogger l, string cmd, RuleConfig r, SocketMessage m)
+        private async Task RP_GrantRevokeRole(string cmd, RuleConfig r, SocketMessage m)
         {
             string[] @in = SplitParams(cmd);
             if (@in.Length != 3)
             {
-                await l($"Error: {@in[0]}: incorrect number of parameters.");
+                await Log($"Error: {@in[0]}: incorrect number of parameters.");
                 return;
             }
             if (!ulong.TryParse(@in[2], out var roleID))
             {
-                await l($"Error: {@in[0]}: Invalid role ID specified.");
+                await Log($"Error: {@in[0]}: Invalid role ID specified.");
                 return;
             }
 
@@ -226,7 +225,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             SocketRole rl = gu.Guild.GetRole(roleID);
             if (rl == null)
             {
-                await l($"Error: {@in[0]}: Specified role not found.");
+                await Log($"Error: {@in[0]}: Specified role not found.");
                 return;
             }
 
@@ -240,13 +239,13 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             {
                 if (!ulong.TryParse(@in[1], out var userID))
                 {
-                    await l($"Error: {@in[0]}: Invalid user ID specified.");
+                    await Log($"Error: {@in[0]}: Invalid user ID specified.");
                     return;
                 }
                 target = gu.Guild.GetUser(userID);
                 if (target == null)
                 {
-                    await l($"Error: {@in[0]}: Given user ID does not exist in this server.");
+                    await Log($"Error: {@in[0]}: Given user ID does not exist in this server.");
                     return;
                 }
             }

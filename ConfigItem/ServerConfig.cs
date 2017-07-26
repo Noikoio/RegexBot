@@ -1,5 +1,5 @@
-﻿using Noikoio.RegexBot.Feature.RegexResponder;
-using System.Collections.Generic;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 namespace Noikoio.RegexBot.ConfigItem
@@ -7,27 +7,27 @@ namespace Noikoio.RegexBot.ConfigItem
     /// <summary>
     /// Represents known information about a Discord guild (server) and other associated data
     /// </summary>
-    class Server
+    class ServerConfig
     {
         private readonly string _name;
         private ulong? _id;
-        private IEnumerable<RuleConfig> _rules;
         private EntityList _moderators;
+        private ReadOnlyDictionary<BotFeature, object> _featureData;
 
         public string Name => _name;
         public ulong? Id {
             get => _id; set { if (!_id.HasValue) _id = value; }
         }
-        public IEnumerable<RuleConfig> MatchResponseRules => _rules;
         public EntityList Moderators => _moderators;
+        public ReadOnlyDictionary<BotFeature, object> FeatureConfigs => _featureData;
 
-        public Server(string name, ulong? id, IEnumerable<RuleConfig> rules, EntityList moderators)
+        public ServerConfig(string name, ulong? id, EntityList moderators, ReadOnlyDictionary<BotFeature, object> featureconf)
         {
             _name = name;
             _id = id;
-            _rules = rules;
             _moderators = moderators;
-            Debug.Assert(_name != null && _rules != null && _moderators != null);
+            _featureData = featureconf;
+            Debug.Assert(_name != null && _moderators != null);
         }
     }
 }

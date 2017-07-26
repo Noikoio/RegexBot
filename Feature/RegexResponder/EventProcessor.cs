@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace Noikoio.RegexBot.Feature.RegexResponder
 {
@@ -14,15 +15,15 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
     /// Implements per-message regex matching and executes customizable responses.
     /// Namesake of this project.
     /// </summary>
-    partial class EventProcessor
+    partial class EventProcessor : BotFeature
     {
         private readonly DiscordSocketClient _client;
-        private readonly ConfigLoader _conf;
 
-        public EventProcessor(DiscordSocketClient client, ConfigLoader conf)
+        public override string Name => "RegexResponder";
+
+        public EventProcessor(DiscordSocketClient client) : base(client)
         {
             _client = client;
-            _conf = conf;
 
             _client.MessageReceived += OnMessageReceived;
             _client.MessageUpdated += OnMessageUpdated;
@@ -58,12 +59,16 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// </summary>
         private async Task ReceiveMessage(SocketMessage arg)
         {
-            if (arg.Author == _client.CurrentUser) return;
+            // Determine channel type - if not a guild channel, stop.
+            var ch = arg.Channel as SocketGuildChannel;
+            if (ch == null) return;
+
+            if (arg.Author == _client.CurrentUser) return; // Don't ever self-trigger
 
             // Looking up server information and extracting settings
-            SocketGuild g = ((SocketGuildUser)arg.Author).Guild;
-            Server sd = null;
-            foreach (var item in _conf.Servers)
+            SocketGuild g = ch.Guild;
+            ServerConfig sd = null;
+            foreach (var item in RegexBot.Config.Servers)
             {
                 if (item.Id.HasValue)
                 {
@@ -81,7 +86,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
                     {
                         item.Id = g.Id;
                         sd = item;
-                        await Logger.GetLogger(ConfigLoader.LogPrefix)
+                        await Logger.GetLogger(Configuration.LogPrefix)
                             ($"Suggestion: Server \"{item.Name}\" can be defined as \"{item.Id}::{item.Name}\"");
                         break;
                     }
@@ -89,9 +94,11 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             }
 
             if (sd == null) return; // No server configuration found
+            var rules = GetConfig(ch.Guild.Id) as IEnumerable<RuleConfig>;
+            if (rules == null) return;
 
             // Further processing is sent to the thread pool
-            foreach (var rule in sd.MatchResponseRules)
+            foreach (var rule in rules)
                 await Task.Run(async () => await ProcessMessage(sd, rule, arg));
         }
 
@@ -99,7 +106,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// Uses information from a single rule and checks if the incoming message is a match.
         /// If it matches, the rule's responses are executed. To be run in the thread pool.
         /// </summary>
-        private async Task ProcessMessage(Server srv, RuleConfig rule, SocketMessage msg)
+        private async Task ProcessMessage(ServerConfig srv, RuleConfig rule, SocketMessage msg)
         {
             string msgcontent;
 
@@ -134,8 +141,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             if (!success) return;
 
             // Prepare to execute responses
-            var log = Logger.GetLogger(rule.DisplayName);
-            await log($"Triggered in {srv.Name}/#{msg.Channel} by {msg.Author.ToString()}");
+            await Log($"\"{rule.DisplayName}\" triggered in {srv.Name}/#{msg.Channel} by {msg.Author.ToString()}");
 
             foreach (string rcmd in rule.Responses)
             {
@@ -145,18 +151,51 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
                     ResponseProcessor response;
                     if (!_commands.TryGetValue(cmd, out response))
                     {
-                        await log($"Unknown command \"{cmd}\"");
+                        await Log($"Unknown command defined in response: \"{cmd}\"");
                         continue;
                     }
-                    await response.Invoke(log, rcmd, rule, msg);
+                    await response.Invoke(rcmd, rule, msg);
                 }
                 catch (Exception ex)
                 {
-                    await log($"Encountered an error while processing \"{cmd}\"");
-                    await log(ex.ToString());
+                    await Log($"Encountered an error while processing \"{cmd}\". Details follow:");
+                    await Log(ex.ToString());
                 }
             }
         }
+
+        [ConfigSection("rules")]
+        public override async Task<object> ProcessConfiguration(JToken configSection)
+        {
+            List<RuleConfig> rules = new List<RuleConfig>();
+            foreach (JObject ruleconf in configSection)
+            {
+                // Try and get at least the name before passing it to RuleItem
+                string name = ruleconf["name"]?.Value<string>();
+                if (name == null)
+                {
+                    await Log("Display name not defined within a rule section.");
+                    return false;
+                }
+                await Log($"Adding rule \"{name}\"");
+
+                RuleConfig rule;
+                try
+                {
+                    rule = new RuleConfig(ruleconf);
+                }
+                catch (RuleImportException ex)
+                {
+                    await Log("-> Error: " + ex.Message);
+                    return false;
+                }
+                rules.Add(rule);
+            }
+
+            return rules.AsReadOnly();
+        }
+
+        // -------------------------------------
 
         /// <summary>
         /// Turns an embed into a single string for regex matching purposes

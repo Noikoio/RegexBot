@@ -10,18 +10,7 @@ namespace Noikoio.RegexBot
     {
         static void Main(string[] args)
         {
-            // Attempt to load basic configuration before setting up the client
-            var config = new ConfigLoader();
-            if (!config.LoadInitialConfig())
-            {
-#if DEBUG
-                Console.WriteLine("Press any key to exit.");
-                Console.ReadKey();
-#endif
-                Environment.Exit(1);
-            }
-
-            RegexBot rb = new RegexBot(config);
+            RegexBot rb = new RegexBot();
 
             Console.CancelKeyPress += rb.Console_CancelKeyPress;
             //AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;

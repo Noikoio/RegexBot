@@ -13,7 +13,6 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
     internal struct RuleConfig
     {
         private string _displayName;
-        private Server _server;
         private IEnumerable<Regex> _regex;
         private IEnumerable<string> _responses;
         private FilterType _filtermode;
@@ -25,7 +24,6 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         private bool _matchEmbeds;
 
         public string DisplayName => _displayName;
-        public Server Server => _server;
         public IEnumerable<Regex> Regex => _regex;
         public IEnumerable<string> Responses => _responses;
         public FilterType FilterMode => _filtermode;
@@ -43,10 +41,8 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         /// <exception cref="RuleImportException>">
         /// Thrown when encountering a missing or invalid value.
         /// </exception>
-        public RuleConfig(Server serverref, JObject ruleconf)
+        public RuleConfig(JObject ruleconf)
         {
-            _server = serverref;
-
             // display name - validation should've been done outside this constructor already
             _displayName = ruleconf["name"]?.Value<string>();
             if (_displayName == null)

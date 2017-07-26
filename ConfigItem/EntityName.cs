@@ -71,7 +71,7 @@ namespace Noikoio.RegexBot.ConfigItem
             if (_id.HasValue) return;
             _id = id;
 
-            var log = Logger.GetLogger(ConfigLoader.LogPrefix);
+            var log = Logger.GetLogger(Configuration.LogPrefix);
             var thisstr = this.ToString();
             log(String.Format(
                 "Suggestion: \"{0}\" may be written in configuration as \"{1}\"",

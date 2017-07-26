@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
-using Noikoio.RegexBot.Feature.RegexResponder;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -14,22 +14,25 @@ namespace Noikoio.RegexBot
     /// <summary>
     /// Configuration loader
     /// </summary>
-    class ConfigLoader
+    class Configuration
     {
         public const string LogPrefix = "Config";
 
+        private readonly RegexBot _bot;
         private readonly string _configPath;
-        private Server[] _servers;
+        private ServerConfig[] _servers;
 
+        // The following values do not change on reload:
         private string _botToken;
         private string _currentGame;
 
         public string BotUserToken => _botToken;
         public string CurrentGame => _currentGame;
-        public Server[] Servers => _servers;
+        public ServerConfig[] Servers => _servers;
 
-        public ConfigLoader()
+        public Configuration(RegexBot bot)
         {
+            _bot = bot;
             var dsc = Path.DirectorySeparatorChar;
             _configPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)
                 + dsc + "settings.json";
@@ -64,7 +67,7 @@ namespace Noikoio.RegexBot
         }
 
         /// <summary>
-        /// Called only on bot startup. Returns false on failure.
+        /// Loads essential, unchanging values needed for bot startup. Returns false on failure.
         /// </summary>
         public bool LoadInitialConfig()
         {
@@ -81,7 +84,7 @@ namespace Noikoio.RegexBot
             }
             _currentGame = conf["playing"]?.Value<string>();
 
-            return ProcessServerConfig(conf).GetAwaiter().GetResult();
+            return true;
         }
 
         /// <summary>
@@ -90,15 +93,10 @@ namespace Noikoio.RegexBot
         /// <returns>False on failure. Specific reasons will have been sent to log.</returns>
         public async Task<bool> ReloadServerConfig()
         {
-            await Logger.GetLogger(LogPrefix)("Configuration reload currently not supported.");
-            return false;
-            // TODO actually implement this
-            var lt = LoadFile();
-            lt.Wait();
-            JObject conf = lt.Result;
-            if (conf == null) return false;
+            var config = await LoadFile();
+            if (config == null) return false;
 
-            return await ProcessServerConfig(conf);
+            return await ProcessServerConfig(config);
         }
 
         /// <summary>
@@ -114,7 +112,7 @@ namespace Noikoio.RegexBot
                 return false;
             }
 
-            List<Server> newservers = new List<Server>();
+            List<ServerConfig> newservers = new List<ServerConfig>();
             await Log("Reading server configurations...");
             foreach (JObject sconf in conf["servers"].Children<JObject>())
             {
@@ -145,38 +143,44 @@ namespace Noikoio.RegexBot
                 // Load server moderator list
                 EntityList mods = new EntityList(sconf["moderators"]);
                 if (sconf["moderators"] != null) await SLog("Moderator " + mods.ToString());
-
-                // Read rules
-                // Also, parsed rules require a server reference. Creating it here.
-                List<RuleConfig> rules = new List<RuleConfig>();
-                Server newserver = new Server(sname, sid, rules, mods);
-
-                foreach (JObject ruleconf in sconf["rules"])
+                
+                // Load feature configurations
+                Dictionary<BotFeature, object> customConfs = new Dictionary<BotFeature, object>();
+                foreach (var item in _bot.Features)
                 {
-                    // Try and get at least the name before passing it to RuleItem
-                    string name = ruleconf["name"]?.Value<string>();
-                    if (name == null)
+                    var attr = item.GetType().GetTypeInfo()
+                        .GetMethod("ProcessConfiguration").GetCustomAttribute<ConfigSectionAttribute>();
+                    if (attr == null)
                     {
-                        await SLog("Display name not defined within a rule section.");
-                        return false;
+                        await SLog("No additional configuration for " + item.Name);
+                        continue;
                     }
-                    await SLog($"Adding rule \"{name}\"");
+                    var section = sconf[attr.SectionName];
+                    if (section == null)
+                    {
+                        await SLog("Additional configuration not defined for " + item.Name);
+                        continue;
+                    }
 
-                    RuleConfig rule;
+                    await SLog("Loading additional configuration for " + item.Name);
+                    object result;
                     try
                     {
-                        rule = new RuleConfig(newserver, ruleconf);
-                    } catch (RuleImportException ex)
+                        result = await item.ProcessConfiguration(section);
+                    }
+                    catch (RuleImportException ex)
                     {
-                        await SLog("-> Error: " + ex.Message);
+                        await SLog($"{item.Name} failed to load configuration: " + ex.Message);
                         return false;
                     }
-                    rules.Add(rule);
+
+                    customConfs.Add(item, result);
                 }
+
 
                 // Switch to using new data
                 List<Tuple<Regex, string[]>> rulesfinal = new List<Tuple<Regex, string[]>>();
-                newservers.Add(newserver);
+                newservers.Add(new ServerConfig(sname, sid, mods, new ReadOnlyDictionary<BotFeature, object>(customConfs)));
             }
 
             _servers = newservers.ToArray();
