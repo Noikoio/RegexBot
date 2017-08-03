@@ -29,7 +29,7 @@ namespace Noikoio.RegexBot
         /// Processes feature-specific configuration.
         /// </summary>
         /// <remarks>
-        /// Feature code <i>should not</i> hold on to this data, but instead use <see cref="GetConfig{T}"/> to retrieve
+        /// Feature code <i>should not</i> hold on to this data, but instead use <see cref="GetConfig(ulong)"/> to retrieve
         /// them. This is in the event that configuration is reverted to an earlier state and allows for the
         /// bot and all features to revert to previously used configuration values with no effort on the part
         /// of individual features.
@@ -73,7 +73,7 @@ namespace Noikoio.RegexBot
 
     /// <summary>
     /// Indicates which section under an individual Discord guild configuration should be passed to the
-    /// feature's <see cref="BotFeature.ProcessConfiguration(JObject)"/> method during configuration load.
+    /// feature's <see cref="BotFeature.ProcessConfiguration(JToken)"/> method during configuration load.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, Inherited = false)]
     public class ConfigSectionAttribute : Attribute
