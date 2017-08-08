@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Noikoio.RegexBot.ConfigItem
+﻿namespace Noikoio.RegexBot.ConfigItem
 {
     enum EntityType { Channel, Role, User }
     
@@ -10,10 +8,10 @@ namespace Noikoio.RegexBot.ConfigItem
     /// over the entity's string-based name, as it can change at any time.
     /// In configuration, entities are fully specified with a prefix (if necessary), an ID, two colons, and a name.
     /// </summary>
-    internal class EntityName
+    struct EntityName
     {
-        private ulong? _id;
-        private string _name;
+        private readonly ulong? _id;
+        private readonly string _name;
         private readonly EntityType _type;
 
         public ulong? Id => _id;
@@ -59,23 +57,6 @@ namespace Noikoio.RegexBot.ConfigItem
                     _id = null;
                 }
             }
-        }
-        
-        /// <summary>
-        /// Updates this entity's ID value only if it was previously unknown.
-        /// Additionally logs a message suggesting to insert the ID into configuration.
-        /// </summary>
-        public void UpdateId(ulong id)
-        {
-            // TODO not in here, but references to this have a lot of boilerplate around it. how to fix?
-            if (_id.HasValue) return;
-            _id = id;
-
-            var log = Logger.GetLogger(Configuration.LogPrefix);
-            var thisstr = this.ToString();
-            log(String.Format(
-                "Suggestion: \"{0}\" may be written in configuration as \"{1}\"",
-                (Type == EntityType.Role ? "" : thisstr.Substring(0, 1)) + Name, thisstr));
         }
 
         public override string ToString()

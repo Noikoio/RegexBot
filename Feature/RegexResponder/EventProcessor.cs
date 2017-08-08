@@ -250,61 +250,52 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
                 return false;
             }
 
-            var author = m.Author as SocketGuildUser;
+            var guildauthor = m.Author as SocketGuildUser;
             foreach (var item in ignorelist.Users)
             {
                 if (!item.Id.HasValue)
                 {
-                    // Attempt to update ID if given nick matches
-                    if (string.Equals(item.Name, author.Nickname, StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(item.Name, author.Username, StringComparison.OrdinalIgnoreCase))
+                    if (guildauthor != null &&
+                        string.Equals(item.Name, guildauthor.Nickname, StringComparison.OrdinalIgnoreCase))
                     {
-                        item.UpdateId(author.Id);
+                        return true;
+                    }
+                    
+                    if (string.Equals(item.Name, m.Author.Username, StringComparison.OrdinalIgnoreCase))
+                    {
                         return true;
                     }
                 } else
                 {
-                    if (item.Id.Value == author.Id) return true;
+                    if (item.Id.Value == m.Author.Id) return true;
                 }
             }
 
-            foreach (var item in ignorelist.Roles)
+            if (guildauthor != null)
             {
-                if (!item.Id.HasValue)
+                foreach (var guildrole in guildauthor.Roles)
                 {
-                    // Try to update ID if none exists
-                    foreach (var role in author.Roles)
+                    if (ignorelist.Roles.Any(listrole =>
                     {
-                        if (string.Equals(item.Name, role.Name, StringComparison.OrdinalIgnoreCase))
-                        {
-                            item.UpdateId(role.Id);
-                            return true;
-                        }
-                    }
-                }
-                else
-                {
-                    if (author.Roles.Any(r => r.Id == item.Id)) return true;
-                }
-            }
-
-            foreach (var item in ignorelist.Channels)
-            {
-                if (!item.Id.HasValue)
-                {
-                    // Try get ID
-                    if (string.Equals(item.Name, m.Channel.Name, StringComparison.OrdinalIgnoreCase))
+                        if (listrole.Id.HasValue) return listrole.Id == guildrole.Id;
+                        else return string.Equals(listrole.Name, guildrole.Name, StringComparison.OrdinalIgnoreCase);
+                    }))
                     {
-                        item.UpdateId(m.Channel.Id);
                         return true;
                     }
                 }
-                else
+
+                foreach (var listchannel in ignorelist.Channels)
                 {
-                    if (item.Id == m.Channel.Id) return true;
+                    if (listchannel.Id.HasValue && listchannel.Id == m.Channel.Id ||
+                        string.Equals(listchannel.Name, m.Channel.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
                 }
             }
 
+            // No match.
             return false;
         }
 
@@ -367,11 +358,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
                     }
                     else
                     {
-                        if (string.Equals(ei.Name, ch.Name, StringComparison.OrdinalIgnoreCase))
-                        {
-                            ei.UpdateId(ch.Id); // Unnecessary, serves only to trigger the suggestion log message
-                            return ch;
-                        }
+                        if (string.Equals(ei.Name, ch.Name, StringComparison.OrdinalIgnoreCase)) return ch;
                     }
                 }
             }
@@ -389,7 +376,6 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
                     if (string.Equals(ei.Name, u.Username, StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(ei.Name, u.Nickname, StringComparison.OrdinalIgnoreCase))
                     {
-                        ei.UpdateId(u.Id); // As mentioned above, serves only to trigger the suggestion log
                         return await u.GetOrCreateDMChannelAsync();
                     }
                 }

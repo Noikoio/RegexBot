@@ -127,7 +127,6 @@ namespace Noikoio.RegexBot.Feature.ModTools
                     if (string.Equals(item.Name, author.Nickname, StringComparison.OrdinalIgnoreCase)
                         || string.Equals(item.Name, author.Username, StringComparison.OrdinalIgnoreCase))
                     {
-                        item.UpdateId(author.Id);
                         return true;
                     }
                 }
@@ -146,7 +145,6 @@ namespace Noikoio.RegexBot.Feature.ModTools
                     {
                         if (string.Equals(item.Name, role.Name, StringComparison.OrdinalIgnoreCase))
                         {
-                            item.UpdateId(role.Id);
                             return true;
                         }
                     }
@@ -164,7 +162,6 @@ namespace Noikoio.RegexBot.Feature.ModTools
                     // Try get ID
                     if (string.Equals(item.Name, m.Channel.Name, StringComparison.OrdinalIgnoreCase))
                     {
-                        item.UpdateId(m.Channel.Id);
                         return true;
                     }
                 }
