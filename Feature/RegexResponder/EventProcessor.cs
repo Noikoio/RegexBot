@@ -1,13 +1,12 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 
 namespace Noikoio.RegexBot.Feature.RegexResponder
 {
@@ -127,7 +126,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             if (rule.MaxLength.HasValue && msgcontent.Length >= rule.MaxLength.Value) return;
 
             // Moderator bypass check
-            if (rule.AllowModBypass == true && IsInList(srv.Moderators, msg)) return;
+            if (rule.AllowModBypass == true && srv.Moderators.ExistsInList(msg)) return;
             // Individual rule filtering check
             if (IsFiltered(rule, msg)) return;
 
@@ -226,77 +225,20 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         {
             if (r.FilterMode == FilterType.None) return false;
 
-            bool inFilter = IsInList(r.FilterList, m);
+            bool inFilter = r.FilterList.ExistsInList(m);
             
             if (r.FilterMode == FilterType.Whitelist)
             {
                 if (!inFilter) return true;
-                return IsInList(r.FilterExemptions, m);
+                return r.FilterExemptions.ExistsInList(m);
             }
             else if (r.FilterMode == FilterType.Blacklist)
             {
                 if (!inFilter) return false;
-                return !IsInList(r.FilterExemptions, m);
+                return !r.FilterExemptions.ExistsInList(m);
             }
 
             return false; // this shouldn't happen™
-        }
-
-        private bool IsInList(EntityList ignorelist, SocketMessage m)
-        {
-            if (ignorelist == null)
-            {
-                // This happens when getting a message from a server not defined in config.
-                return false;
-            }
-
-            var guildauthor = m.Author as SocketGuildUser;
-            foreach (var item in ignorelist.Users)
-            {
-                if (!item.Id.HasValue)
-                {
-                    if (guildauthor != null &&
-                        string.Equals(item.Name, guildauthor.Nickname, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                    
-                    if (string.Equals(item.Name, m.Author.Username, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                } else
-                {
-                    if (item.Id.Value == m.Author.Id) return true;
-                }
-            }
-
-            if (guildauthor != null)
-            {
-                foreach (var guildrole in guildauthor.Roles)
-                {
-                    if (ignorelist.Roles.Any(listrole =>
-                    {
-                        if (listrole.Id.HasValue) return listrole.Id == guildrole.Id;
-                        else return string.Equals(listrole.Name, guildrole.Name, StringComparison.OrdinalIgnoreCase);
-                    }))
-                    {
-                        return true;
-                    }
-                }
-
-                foreach (var listchannel in ignorelist.Channels)
-                {
-                    if (listchannel.Id.HasValue && listchannel.Id == m.Channel.Id ||
-                        string.Equals(listchannel.Name, m.Channel.Name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            // No match.
-            return false;
         }
 
         private string[] SplitParams(string cmd, int? limit = null)

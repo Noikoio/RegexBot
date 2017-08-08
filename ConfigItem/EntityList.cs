@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Discord.WebSocket;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -63,6 +64,67 @@ namespace Noikoio.RegexBot.ConfigItem
                 + $"{Users.Count()} user(s)";
         }
 
+        /// <summary>
+        /// Checks if the parameters of the given <see cref="SocketMessage"/> match with the entities
+        /// specified in this list.
+        /// </summary>
+        /// <param name="msg">An incoming message.</param>
+        /// <returns>
+        /// True if the <see cref="SocketMessage"/> occurred within a channel specified in this list,
+        /// or if the message author belongs to one or more roles in this list, or if the user itself
+        /// is defined within this list.
+        /// </returns>
+        public bool ExistsInList(SocketMessage msg)
+        {
+            var guildauthor = msg.Author as SocketGuildUser;
+            foreach (var item in this.Users)
+            {
+                if (!item.Id.HasValue)
+                {
+                    if (guildauthor != null &&
+                        string.Equals(item.Name, guildauthor.Nickname, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+                    if (string.Equals(item.Name, msg.Author.Username, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (item.Id.Value == msg.Author.Id) return true;
+                }
+            }
+
+            if (guildauthor != null)
+            {
+                foreach (var guildrole in guildauthor.Roles)
+                {
+                    if (this.Roles.Any(listrole =>
+                    {
+                        if (listrole.Id.HasValue) return listrole.Id == guildrole.Id;
+                        else return string.Equals(listrole.Name, guildrole.Name, StringComparison.OrdinalIgnoreCase);
+                    }))
+                    {
+                        return true;
+                    }
+                }
+
+                foreach (var listchannel in this.Channels)
+                {
+                    if (listchannel.Id.HasValue && listchannel.Id == msg.Channel.Id ||
+                        string.Equals(listchannel.Name, msg.Channel.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            // No match.
+            return false;
+        }
 
         /// <summary>
         /// Helper method for reading whitelist and blacklist filtering lists

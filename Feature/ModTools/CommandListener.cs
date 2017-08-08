@@ -35,8 +35,7 @@ namespace Noikoio.RegexBot.Feature.ModTools
             if (sc == null) return;
 
             // Disregard if not a bot moderator
-            // TODO have this and RegexResponder call the same relevant code
-            if (!IsInList(sc.Moderators, arg)) return;
+            if (!sc.Moderators.ExistsInList(arg)) return;
 
             // Disregard if the message contains a newline character
             if (arg.Content.Contains("\n")) return;
@@ -109,69 +108,5 @@ namespace Noikoio.RegexBot.Feature.ModTools
         }
 
         public new Task Log(string text) => base.Log(text);
-
-        private bool IsInList(EntityList ignorelist, SocketMessage m)
-        {
-            if (ignorelist == null)
-            {
-                // This happens when getting a message from a server not defined in config.
-                return false;
-            }
-
-            var author = m.Author as SocketGuildUser;
-            foreach (var item in ignorelist.Users)
-            {
-                if (!item.Id.HasValue)
-                {
-                    // Attempt to update ID if given nick matches
-                    if (string.Equals(item.Name, author.Nickname, StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(item.Name, author.Username, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                }
-                else
-                {
-                    if (item.Id.Value == author.Id) return true;
-                }
-            }
-
-            foreach (var item in ignorelist.Roles)
-            {
-                if (!item.Id.HasValue)
-                {
-                    // Try to update ID if none exists
-                    foreach (var role in author.Roles)
-                    {
-                        if (string.Equals(item.Name, role.Name, StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
-                    }
-                }
-                else
-                {
-                    if (author.Roles.Any(r => r.Id == item.Id)) return true;
-                }
-            }
-
-            foreach (var item in ignorelist.Channels)
-            {
-                if (!item.Id.HasValue)
-                {
-                    // Try get ID
-                    if (string.Equals(item.Name, m.Channel.Name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                }
-                else
-                {
-                    if (item.Id == m.Channel.Id) return true;
-                }
-            }
-
-            return false;
-        }
     }
 }
