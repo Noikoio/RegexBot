@@ -75,6 +75,7 @@ namespace Noikoio.RegexBot.Feature.ModTools
 
             try
             {
+                if (reason != null) reason = Uri.EscapeDataString(reason); // TODO remove when fixed in library
                 await g.AddBanAsync(targetobj, _purgeDays, reason);
                 await msg.Channel.SendMessageAsync($":white_check_mark: Banned user **{targetobj.ToString()}**.");
             }

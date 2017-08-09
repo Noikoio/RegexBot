@@ -57,6 +57,7 @@ namespace Noikoio.RegexBot.Feature.ModTools
 
             try
             {
+                if (reason != null) reason = Uri.EscapeDataString(reason); // TODO remove when fixed in library
                 await targetobj.KickAsync(reason);
                 await msg.Channel.SendMessageAsync($":white_check_mark: Kicked user **{targetobj.ToString()}**.");
             }
