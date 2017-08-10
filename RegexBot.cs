@@ -44,8 +44,9 @@ namespace Noikoio.RegexBot
             // Initialize features
             _features = new BotFeature[]
             {
-                new Feature.RegexResponder.EventProcessor(_client),
-                new Feature.ModTools.CommandListener(_client)
+                new Feature.AutoMod.AutoMod(_client),
+                new Feature.ModTools.CommandListener(_client),
+                new Feature.AutoRespond.AutoRespond(_client)
             };
             var dlog = Logger.GetLogger("Discord.Net");
             _client.Log += async (arg) =>
