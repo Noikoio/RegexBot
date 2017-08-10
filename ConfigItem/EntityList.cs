@@ -127,8 +127,11 @@ namespace Noikoio.RegexBot.ConfigItem
         }
 
         /// <summary>
-        /// Helper method for reading whitelist and blacklist filtering lists
+        /// Helper method for reading whitelist and blacklist filtering lists.
         /// </summary>
+        /// <param name="section">
+        /// A JSON object which presumably contains an array named "whitelist" or "blacklist".
+        /// </param>
         public static (FilterType, EntityList) GetFilterList(JObject section)
         {
             var mode = FilterType.None;
