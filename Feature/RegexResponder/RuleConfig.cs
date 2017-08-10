@@ -15,9 +15,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         private string _displayName;
         private IEnumerable<Regex> _regex;
         private IEnumerable<string> _responses;
-        private FilterType _filtermode;
-        private EntityList _filterlist;
-        private EntityList _filterexempt;
+        private FilterList _filter;
         private int? _minLength;
         private int? _maxLength;
         private bool _modBypass;
@@ -26,9 +24,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
         public string DisplayName => _displayName;
         public IEnumerable<Regex> Regex => _regex;
         public IEnumerable<string> Responses => _responses;
-        public FilterType FilterMode => _filtermode;
-        public EntityList FilterList => _filterlist;
-        public EntityList FilterExemptions => _filterexempt;
+        public FilterList Filter => _filter;
         public int? MinLength => _minLength;
         public int? MaxLength => _maxLength;
         public bool AllowModBypass => _modBypass;
@@ -131,9 +127,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             _responses = responses.ToArray();
 
             // (white|black)list filtering
-            (_filtermode, _filterlist) = EntityList.GetFilterList(ruleconf);
-            // filtering exemptions
-            _filterexempt = new EntityList(ruleconf["exempt"]);
+            _filter = new FilterList(ruleconf);
 
             // moderator bypass toggle - true by default, must be explicitly set to false
             bool? modoverride = ruleconf["AllowModBypass"]?.Value<bool>();

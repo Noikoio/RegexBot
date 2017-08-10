@@ -128,7 +128,7 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             // Moderator bypass check
             if (rule.AllowModBypass == true && srv.Moderators.ExistsInList(msg)) return;
             // Individual rule filtering check
-            if (IsFiltered(rule, msg)) return;
+            if (rule.Filter.IsFiltered(msg)) return;
 
             // And finally, pattern matching checks
             bool success = false;
@@ -219,26 +219,6 @@ namespace Noikoio.RegexBot.Feature.RegexResponder
             }
 
             return result.ToString();
-        }
-        
-        private bool IsFiltered(RuleConfig r, SocketMessage m)
-        {
-            if (r.FilterMode == FilterType.None) return false;
-
-            bool inFilter = r.FilterList.ExistsInList(m);
-            
-            if (r.FilterMode == FilterType.Whitelist)
-            {
-                if (!inFilter) return true;
-                return r.FilterExemptions.ExistsInList(m);
-            }
-            else if (r.FilterMode == FilterType.Blacklist)
-            {
-                if (!inFilter) return false;
-                return !r.FilterExemptions.ExistsInList(m);
-            }
-
-            return false; // this shouldn't happen™
         }
 
         private string[] SplitParams(string cmd, int? limit = null)
