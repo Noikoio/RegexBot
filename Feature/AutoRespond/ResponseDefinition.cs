@@ -8,7 +8,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
     /// <summary>
     /// Represents a single autoresponse definition.
     /// </summary>
-    struct ResponseConfigItem
+    struct ResponseDefinition
     {
         public enum ResponseType { None, Exec, Reply }
 
@@ -16,15 +16,16 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         Regex _trigger;
         ResponseType _rtype;
         string _rbody; // response body
-        private FilterType _filtermode;
-        private EntityList _filterlist;
+        private FilterList _filter;
+        private RateLimitCache _limit;
 
         public string Label => _label;
         public Regex Trigger => _trigger;
         public (ResponseType, string) Response => (_rtype, _rbody);
-        public (FilterType, EntityList) Filter => (_filtermode, _filterlist);
+        public FilterList Filter => _filter;
+        public RateLimitCache RateLimit => _limit;
 
-        public ResponseConfigItem(JObject definition)
+        public ResponseDefinition(JObject definition)
         {
             // label
             _label = definition["label"]?.Value<string>();
@@ -77,7 +78,25 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             // ---
 
             // whitelist/blacklist filtering
-            (_filtermode, _filterlist) = EntityList.GetFilterList(definition);
+            _filter = new FilterList(definition);
+
+            // rate limiting
+            string rlstr = definition["ratelimit"].Value<string>();
+            if (string.IsNullOrWhiteSpace(rlstr))
+            {
+                _limit = new RateLimitCache(RateLimitCache.DefaultTimeout);
+            }
+            else
+            {
+                if (ushort.TryParse(rlstr, out var rlval))
+                {
+                    _limit = new RateLimitCache(rlval);
+                }
+                else
+                {
+                    throw new RuleImportException("Rate limit value is invalid" + errorpfx);
+                }
+            }
         }
     }
 }
