@@ -21,13 +21,27 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
     /// </list>
     /// </para>
     /// </summary>
-    class AutoRespond : BotFeature
+    partial class AutoRespond : BotFeature
     {
         public override string Name => "AutoRespond";
 
         public AutoRespond(DiscordSocketClient client) : base(client)
         {
-            throw new NotImplementedException();
+            client.MessageReceived += Client_MessageReceived;
+        }
+
+        private async Task Client_MessageReceived(SocketMessage arg)
+        {
+            // Determine channel type - if not a guild channel, stop.
+            var ch = arg.Channel as SocketGuildChannel;
+            if (ch == null) return;
+
+            // TODO either search server by name or remove server name support entirely
+            var defs = GetConfig(ch.Guild.Id) as IEnumerable<ResponseDefinition>;
+            if (defs == null) return;
+
+            foreach (var def in defs)
+                await Task.Run(async () => await ProcessMessage(arg, def));
         }
 
         [ConfigSection("autoresponses")]
