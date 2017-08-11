@@ -3,7 +3,7 @@ using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
-using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Feature.ModTools
@@ -56,18 +56,19 @@ namespace Noikoio.RegexBot.Feature.ModTools
                 }
             }
 
-            // Getting SocketGuildUser kick target (ensuring that it's the parameter)
-            SocketGuildUser targetobj = null;
-            if (UserMention.IsMatch(targetstr))
-            {
-                targetobj = msg.MentionedUsers.ElementAt(0) as SocketGuildUser;
-            }
-            else if (ulong.TryParse(targetstr, out var snowflake))
-            {
-                targetobj = g.GetUser(snowflake);
-            }
+            // Getting SocketGuildUser target
+            Match m = UserMention.Match(targetstr);
+            if (m.Success) targetstr = m.Groups["snowflake"].Value;
 
-            if (targetobj == null)
+            SocketGuildUser targetobj = null;
+            ulong targetuid;
+            string targetdisp;
+            if (ulong.TryParse(targetstr, out targetuid))
+            {
+                targetobj = g.GetUser(targetuid);
+                targetdisp = (targetobj == null ? $"with ID {targetuid}" : targetobj.ToString());
+            }
+            else
             {
                 await SendUsageMessage(msg, ":x: **Unable to determine the target user.**");
                 return;
@@ -76,8 +77,8 @@ namespace Noikoio.RegexBot.Feature.ModTools
             try
             {
                 if (reason != null) reason = Uri.EscapeDataString(reason); // TODO remove when fixed in library
-                await g.AddBanAsync(targetobj, _purgeDays, reason);
-                await msg.Channel.SendMessageAsync($":white_check_mark: Banned user **{targetobj.ToString()}**.");
+                await g.AddBanAsync(targetuid, _purgeDays, reason);
+                await msg.Channel.SendMessageAsync($":white_check_mark: Banned user **{targetdisp}**.");
             }
             catch (Discord.Net.HttpException ex)
             {

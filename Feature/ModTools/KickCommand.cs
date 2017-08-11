@@ -38,23 +38,26 @@ namespace Noikoio.RegexBot.Feature.ModTools
                 return;
             }
 
-            // Getting SocketGuildUser kick target (ensuring that it's the parameter)
+            // Getting SocketGuildUser target
+            Match m = UserMention.Match(targetstr);
+            if (m.Success) targetstr = m.Groups["snowflake"].Value;
+
             SocketGuildUser targetobj = null;
-            if (UserMention.IsMatch(targetstr))
-            {
-                targetobj = msg.MentionedUsers.ElementAt(0) as SocketGuildUser;
-            }
-            else if (ulong.TryParse(targetstr, out var snowflake))
+            if (ulong.TryParse(targetstr, out var snowflake))
             {
                 targetobj = g.GetUser(snowflake);
+                if (targetobj == null)
+                {
+                    await SendUsageMessage(msg, ":x: **Unable to determine the target user.**");
+                    return;
+                }
             }
-            
-            if (targetobj == null)
+            else
             {
-                await SendUsageMessage(msg, ":x: **Unable to determine the target user.**");
+                await SendUsageMessage(msg, ":x: **The given target is not valid.**");
                 return;
             }
-
+            
             try
             {
                 if (reason != null) reason = Uri.EscapeDataString(reason); // TODO remove when fixed in library
