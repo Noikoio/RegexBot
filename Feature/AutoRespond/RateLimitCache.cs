@@ -8,7 +8,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
     /// </summary>
     class RateLimitCache
     {
-        public const ushort DefaultTimeout = 30; // TODO make configurable
+        public const ushort DefaultTimeout = 20; // this is Skeeter's fault
 
         private readonly ushort _timeout;
         private Dictionary<ulong, DateTime> _cache;
@@ -32,6 +32,8 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         /// <returns>True on success. False if the given ID already exists.</returns>
         public bool AddUsage(ulong id)
         {
+            if (_timeout == 0) return true;
+
             Clean();
             if (_cache.ContainsKey(id)) return false;
             _cache.Add(id, DateTime.Now);
