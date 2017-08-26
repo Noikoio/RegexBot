@@ -8,13 +8,17 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
     {
         private async Task ProcessMessage(SocketMessage msg, ResponseDefinition def)
         {
-            // Checks before executing
+            // Check filters
             if (def.Filter.IsFiltered(msg)) return;
+
+            // Check rate limit
             if (!def.RateLimit.AddUsage(msg.Channel.Id)) return;
+            
+            // Check if the trigger is a match, of course
+            if (!def.Trigger.IsMatch(msg.Content)) return;
 
             await Log($"'{def.Label}' triggered in #{msg.Channel.Name} by {msg.Author}");
             var (type, text) = def.Response;
-
             if (type == ResponseDefinition.ResponseType.Reply) await ProcessReply(msg, text);
             else if (type == ResponseDefinition.ResponseType.Exec) await ProcessExec(msg, text);
         }
