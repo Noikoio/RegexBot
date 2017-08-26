@@ -55,7 +55,8 @@ namespace Noikoio.RegexBot
                     arg.Message));
 
             // With features initialized, finish loading configuration
-            if (!_config.ReloadServerConfig().GetAwaiter().GetResult())
+            var conf = _config.ReloadServerConfig().Result;
+            if (conf == false)
             {
                 Console.WriteLine("Failed to load server configuration.");
 #if DEBUG
