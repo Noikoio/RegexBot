@@ -58,10 +58,9 @@ namespace Noikoio.RegexBot.Feature.AutoMod
 
             foreach (var rule in rules)
             {
-                // Checking for mod bypass here (Rule doesn't have access to mod list)
+                // Checking for mod bypass here (Rule.Match isn't able to access mod list)
                 bool isMod = IsModerator(ch.Guild.Id, m);
-                //await Task.Run(async () => await ProcessMessage(m, rule, isMod));
-                await ProcessMessage(m, rule, isMod);
+                await Task.Run(async () => await ProcessMessage(m, rule, isMod));
             }
         }
 
@@ -77,7 +76,6 @@ namespace Noikoio.RegexBot.Feature.AutoMod
 
             foreach (Response resp in r.Response)
             {
-                // TODO foreach await (when that becomes available)
                 try
                 {
                     await resp.Invoke(m);
