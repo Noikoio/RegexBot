@@ -79,7 +79,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             _filter = new FilterList(data);
 
             // rate limiting
-            string rlstr = data["ratelimit"].Value<string>();
+            string rlstr = data["ratelimit"]?.Value<string>();
             if (string.IsNullOrWhiteSpace(rlstr))
             {
                 _limit = new RateLimitCache(RateLimitCache.DefaultTimeout);
