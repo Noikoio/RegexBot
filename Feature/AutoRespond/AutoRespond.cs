@@ -53,7 +53,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
                 await Log($"Added definition '{resp.Label}'");
             }
 
-            return Task.FromResult<object>(responses.AsReadOnly());
+            return responses.AsReadOnly();
         }
     }
 }
