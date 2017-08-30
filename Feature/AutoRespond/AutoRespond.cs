@@ -42,13 +42,15 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         }
 
         [ConfigSection("autoresponses")]
-        public override Task<object> ProcessConfiguration(JToken configSection)
+        public override async Task<object> ProcessConfiguration(JToken configSection)
         {
             var responses = new List<ResponseDefinition>();
             foreach (var def in configSection.Children<JProperty>())
             {
-                // Everything is left to the constructor
-                responses.Add(new ResponseDefinition(def));
+                // All validation is left to the constructor
+                var resp = new ResponseDefinition(def);
+                responses.Add(resp);
+                await Log($"Added definition '{resp.Label}'");
             }
 
             return Task.FromResult<object>(responses.AsReadOnly());

@@ -8,7 +8,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
     /// <summary>
     /// Represents a single autoresponse definition.
     /// </summary>
-    struct ResponseDefinition
+    class ResponseDefinition
     {
         public enum ResponseType { None, Exec, Reply }
 
@@ -96,5 +96,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
                 }
             }
         }
+
+        public override string ToString() => $"Autoresponse definition '{Label}'";
     }
 }
