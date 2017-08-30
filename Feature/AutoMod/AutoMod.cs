@@ -29,12 +29,15 @@ namespace Noikoio.RegexBot.Feature.AutoMod
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
             List<Rule> rules = new List<Rule>();
-            foreach (JObject ruleconf in configSection)
+
+            foreach (var def in configSection.Children<JProperty>())
             {
-                var rule = new Rule(this, ruleconf);
+                string label = def.Name;
+                var rule = new Rule(this, def);
                 rules.Add(rule);
                 await Log($"Added rule '{rule.Label}'");
             }
+            
             return rules.AsReadOnly();
         }
 

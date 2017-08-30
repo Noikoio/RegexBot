@@ -25,19 +25,17 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         public FilterList Filter => _filter;
         public RateLimitCache RateLimit => _limit;
 
-        public ResponseDefinition(JObject definition)
+        public ResponseDefinition(JProperty definition)
         {
-            // label
-            _label = definition["label"]?.Value<string>();
-            if (string.IsNullOrWhiteSpace(_label))
-                throw new RuleImportException("Label is not defined in response definition.");
+            _label = definition.Name;
+            var data = (JObject)definition.Value;
 
             // error postfix string
             string errorpfx = $" in response definition for '{_label}'.";
 
             // regex trigger
             const RegexOptions rxopts = RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline;
-            string triggerstr = definition["trigger"]?.Value<string>();
+            string triggerstr = data["trigger"]?.Value<string>();
             if (string.IsNullOrWhiteSpace(triggerstr))
                 throw new RuleImportException("Regular expression trigger is not defined" + errorpfx);
             try
@@ -56,7 +54,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             _rtype = ResponseType.None;
 
             // exec response ---
-            string execstr = definition["exec"]?.Value<string>();
+            string execstr = data["exec"]?.Value<string>();
             if (!string.IsNullOrWhiteSpace(execstr))
             {
                 _rbody = execstr;
@@ -64,7 +62,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             }
 
             // reply response
-            string replystr = definition["reply"]?.Value<string>();
+            string replystr = data["reply"]?.Value<string>();
             if (!string.IsNullOrWhiteSpace(replystr))
             {
                 if (_rbody != null)
@@ -78,10 +76,10 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             // ---
 
             // whitelist/blacklist filtering
-            _filter = new FilterList(definition);
+            _filter = new FilterList(data);
 
             // rate limiting
-            string rlstr = definition["ratelimit"].Value<string>();
+            string rlstr = data["ratelimit"].Value<string>();
             if (string.IsNullOrWhiteSpace(rlstr))
             {
                 _limit = new RateLimitCache(RateLimitCache.DefaultTimeout);

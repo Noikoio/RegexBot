@@ -45,7 +45,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         public override Task<object> ProcessConfiguration(JToken configSection)
         {
             var responses = new List<ResponseDefinition>();
-            foreach (JObject def in configSection)
+            foreach (var def in configSection.Children<JProperty>())
             {
                 // Everything is left to the constructor
                 responses.Add(new ResponseDefinition(def));

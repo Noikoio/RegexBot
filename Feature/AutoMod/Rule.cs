@@ -41,13 +41,14 @@ namespace Noikoio.RegexBot.Feature.AutoMod
         /// <summary>
         /// Creates a new Rule instance to represent the given configuration.
         /// </summary>
-        public Rule(AutoMod instance, JObject ruleconf)
+        public Rule(AutoMod instance, JProperty definition)
         {
             _instance = instance;
 
-            _label = ruleconf["label"]?.Value<string>();
-            if (string.IsNullOrEmpty(_label))
-                throw new RuleImportException("Label not defined.");
+            _label = definition.Name;
+            var ruleconf = (JObject)definition.Value;
+            // TODO validation. does the above line even throw an exception in the right cases?
+            // and what about the label? does it make for a good name?
 
             string errpfx = $" in definition for rule '{_label}'.";
 
