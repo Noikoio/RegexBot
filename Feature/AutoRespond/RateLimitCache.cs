@@ -25,18 +25,21 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         }
 
         /// <summary>
-        /// Adds a cache item corersponding to the given ID.
+        /// Checks if a "usage" is allowed for the given value.
         /// Items added to cache will be removed after the number of seconds specified in <see cref="Timeout"/>.
         /// </summary>
         /// <param name="id">The ID to add to the cache.</param>
         /// <returns>True on success. False if the given ID already exists.</returns>
-        public bool AddUsage(ulong id)
+        public bool AllowUsage(ulong id)
         {
             if (_timeout == 0) return true;
 
-            Clean();
-            if (_cache.ContainsKey(id)) return false;
-            _cache.Add(id, DateTime.Now);
+            lock (this)
+            {
+                Clean();
+                if (_cache.ContainsKey(id)) return false;
+                _cache.Add(id, DateTime.Now);
+            }
             return true;
         }
 

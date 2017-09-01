@@ -10,12 +10,12 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         {
             // Check filters
             if (def.Filter.IsFiltered(msg)) return;
+            
+            // Check if the trigger is a match
+            if (!def.Trigger.IsMatch(msg.Content)) return;
 
             // Check rate limit
-            if (!def.RateLimit.AddUsage(msg.Channel.Id)) return;
-            
-            // Check if the trigger is a match, of course
-            if (!def.Trigger.IsMatch(msg.Content)) return;
+            if (!def.RateLimit.AllowUsage(msg.Channel.Id)) return;
 
             await Log($"'{def.Label}' triggered in #{msg.Channel.Name} by {msg.Author}");
             var (type, text) = def.Response;
