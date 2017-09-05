@@ -1,25 +1,33 @@
 # RegexBot
-RegexBot is a standalone Discord moderation bot that makes use of the [Discord.Net](https://github.com/RogueException/Discord.Net) library.
+RegexBot is a standalone Discord moderation bot that makes use of the
+[Discord.Net](https://github.com/RogueException/Discord.Net) library.
 
-The goal for this project is to provide the most useful bot that fits the exact needs for your Discord server. It should do exactly what it needs to do by your needs. No more, and no less.
+The goal of this project is to provice a bot that can truly fit your unique needs in managing Discord server.
+To that end, many aspects of the bot's behavior can be configured and fine-tuned, down to how it responds to
+rules that you have implemented.
 
-As of the time this file was last updated, the following features are supported:
-* Regular expression matching
-  * Able to define one or more actions to take on a match
-    * Send message to channel or user
-    * Report to channel or user
-    * Add or remove a role
-    * Delete the message
-    * Ban the user
-    * Run an external program and send the output to a user or channel
-  * Matching constraints
-    * Minimum/maximum message length constraints
-    * Whitelisting and blacklisting per-user, per-role, and/or per-channel
-      * Exemptions to whitelisting and blacklisting defined per-user, per-role, and/or per-channel
-    * Match embed content instead of message content
-* Mod commands
+Are you satisfied with your current bot but wish that you could change *that one thing* to better suit your
+needs? This project is an answer to that.
+
+## Features
+As of the time of this writing, the following features are supported:
+* Automoderator-like expression matching and responses
+  * Able to define one or more actions on a match
+    * Send message to any channel or user
+	* Report message to channel or user
+	* Add or remove a role
+	* Delete the message
+	* Ban the user
+  * Able to define extra constraints
+    * Case sensitivity
+	* Minimum or maximum message length
+	* Match only for certain users, or within certain channels
+	  * Or match everyone and everything *except* those
+* Easy configuration for adding fun commands and autoresponses
+  * Can also execute external scripts for dynamic responses
+* Customizable mod-only commands
   * Custom command names
-  * Multiple aliases for the same command
+  * Multiple aliases
   * Per-command, per-alias options
     * Optionally force your moderators to specify reasons for certain actions
       * And place them in the Audit Log
