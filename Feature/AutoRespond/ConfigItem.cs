@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Noikoio.RegexBot.Feature.AutoRespond
@@ -14,14 +15,14 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         public enum ResponseType { None, Exec, Reply }
 
         string _label;
-        Regex _trigger;
+        IEnumerable<Regex> _regex;
         ResponseType _rtype;
-        string _rbody; // response body
+        string _rbody;
         private FilterList _filter;
         private RateLimitCache _limit;
 
         public string Label => _label;
-        public Regex Trigger => _trigger;
+        public IEnumerable<Regex> Regex => _regex;
         public (ResponseType, string) Response => (_rtype, _rbody);
         public FilterList Filter => _filter;
         public RateLimitCache RateLimit => _limit;
@@ -35,26 +36,48 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             string errorpfx = $" in response definition for '{_label}'.";
 
             // regex trigger
+            const string NoRegexError = "No regular expression patterns are defined";
+            var regexes = new List<Regex>();
             const RegexOptions rxopts = RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline;
-            string triggerstr = data["trigger"]?.Value<string>();
-            if (string.IsNullOrWhiteSpace(triggerstr))
-                throw new RuleImportException("Regular expression trigger is not defined" + errorpfx);
-            try
+            var rxconf = data["regex"];
+            if (rxconf == null) throw new RuleImportException(NoRegexError + errorpfx);
+            if (rxconf.Type == JTokenType.Array)
             {
-                _trigger = new Regex(triggerstr, rxopts);
+                foreach (var input in rxconf.Values<string>())
+                {
+                    try
+                    {
+                        Regex r = new Regex(input, rxopts);
+                        regexes.Add(r);
+                    }
+                    catch (ArgumentException)
+                    {
+                        throw new RuleImportException(
+                            $"Failed to parse regular expression pattern '{input}'{errorpfx}");
+                    }
+                }
             }
-            catch (ArgumentException ex)
+            else
             {
-                throw new RuleImportException
-                    ("Failed to parse regular expression pattern" + errorpfx +
-                    $" ({ex.GetType().Name}: {ex.Message})");
+                string rxstr = rxconf.Value<string>();
+                try
+                {
+                    Regex r = new Regex(rxstr, rxopts);
+                    regexes.Add(r);
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is NullReferenceException)
+                {
+                    throw new RuleImportException(
+                        $"Failed to parse regular expression pattern '{rxstr}'{errorpfx}");
+                }
             }
+            _regex = regexes.ToArray();
 
             // response - defined in either "exec" or "reply", but not both
             _rbody = null;
             _rtype = ResponseType.None;
 
-            // exec response ---
+            // exec response
             string execstr = data["exec"]?.Value<string>();
             if (!string.IsNullOrWhiteSpace(execstr))
             {
@@ -108,7 +131,16 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             if (Filter.IsFiltered(m)) return false;
 
             // Match check
-            if (!Trigger.IsMatch(m.Content)) return false;
+            bool matchFound = false;
+            foreach (var item in Regex)
+            {
+                if (item.IsMatch(m.Content))
+                {
+                    matchFound = true;
+                    break;
+                }
+            }
+            if (!matchFound) return false;
 
             // Rate limit check - currently per channel
             if (!RateLimit.AllowUsage(m.Channel.Id)) return false;
