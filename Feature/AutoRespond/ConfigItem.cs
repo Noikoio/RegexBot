@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Discord.WebSocket;
+using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
 using System.Text.RegularExpressions;
@@ -95,6 +96,24 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
                     throw new RuleImportException("Rate limit value is invalid" + errorpfx);
                 }
             }
+        }
+
+        /// <summary>
+        /// Checks given message to see if it matches this rule's constraints.
+        /// </summary>
+        /// <returns>If true, the rule's response(s) should be executed.</returns>
+        public bool Match(SocketMessage m)
+        {
+            // Filter check
+            if (Filter.IsFiltered(m)) return false;
+
+            // Match check
+            if (!Trigger.IsMatch(m.Content)) return false;
+
+            // Rate limit check - currently per channel
+            if (!RateLimit.AllowUsage(m.Channel.Id)) return false;
+
+            return true;
         }
 
         public override string ToString() => $"Autoresponse definition '{Label}'";
