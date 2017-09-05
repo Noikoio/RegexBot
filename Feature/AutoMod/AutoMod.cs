@@ -75,7 +75,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod
             if (!r.Match(m, isMod)) return;
 
             // TODO make log optional; configurable
-            await Log($"{r} triggered by {m.Author.ToString()}");
+            await Log($"{r} triggered by {m.Author} in {((SocketGuildChannel)m.Channel).Guild.Name}/#{m.Channel.Name}");
 
             foreach (Response resp in r.Response)
             {

@@ -16,8 +16,8 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
 
             // Check rate limit
             if (!def.RateLimit.AllowUsage(msg.Channel.Id)) return;
-
-            await Log($"'{def.Label}' triggered in #{msg.Channel.Name} by {msg.Author}");
+            
+            await Log($"'{def.Label}' triggered by {msg.Author} in {((SocketGuildChannel)msg.Channel).Guild.Name}/#{msg.Channel.Name}");
             var (type, text) = def.Response;
             if (type == ResponseDefinition.ResponseType.Reply) await ProcessReply(msg, text);
             else if (type == ResponseDefinition.ResponseType.Exec) await ProcessExec(msg, text);
