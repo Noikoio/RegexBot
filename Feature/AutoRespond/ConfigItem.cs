@@ -8,7 +8,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
     /// <summary>
     /// Represents a single autoresponse definition.
     /// </summary>
-    class ResponseDefinition
+    class ConfigItem
     {
         public enum ResponseType { None, Exec, Reply }
 
@@ -25,7 +25,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         public FilterList Filter => _filter;
         public RateLimitCache RateLimit => _limit;
 
-        public ResponseDefinition(JProperty definition)
+        public ConfigItem(JProperty definition)
         {
             _label = definition.Name;
             var data = (JObject)definition.Value;

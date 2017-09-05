@@ -9,9 +9,9 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
     /// Removes the invoking message.
     /// Takes no parameters.
     /// </summary>
-    class Remove : Response
+    class Remove : ResponseBase
     {
-        public Remove(Rule rule, string cmdline) : base(rule, cmdline)
+        public Remove(ConfigItem rule, string cmdline) : base(rule, cmdline)
         {
             // Throw exception if extra parameters found
             if (cmdline.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length > 1)

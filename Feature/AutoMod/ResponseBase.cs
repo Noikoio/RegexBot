@@ -7,19 +7,19 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.AutoMod.Responses
+namespace Noikoio.RegexBot.Feature.AutoMod
 {
     /// <summary>
     /// Base class for all Response classes.
     /// Contains helper methods for use by response code.
     /// </summary>
     [DebuggerDisplay("Response: {_cmdline}")]
-    abstract class Response
+    abstract class ResponseBase
     {
-        private readonly Rule _rule;
+        private readonly ConfigItem _rule;
         private readonly string _cmdline;
         
-        protected Rule Rule => _rule;
+        protected ConfigItem Rule => _rule;
         private DiscordSocketClient Client => _rule.Discord;
         public string CmdLine => _cmdline;
         public string CmdArg0 {
@@ -33,7 +33,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
         /// <summary>
         /// Deriving constructor should do validation of incoming <paramref name="cmdline"/>.
         /// </summary>
-        public Response(Rule rule, string cmdline)
+        public ResponseBase(ConfigItem rule, string cmdline)
         {
             _rule = rule;
             _cmdline = cmdline;
@@ -54,23 +54,23 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
             new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
             {
                 // Define all accepted commands and their corresponding types here
-                { "say", typeof(Say) },
-                { "send", typeof(Say) },
-                { "report", typeof(Report) },
-                { "addrole", typeof(RoleManipulation) },
-                { "grantrole", typeof(RoleManipulation) },
-                { "delrole", typeof(RoleManipulation) },
-                { "removerole", typeof(RoleManipulation) },
-                { "revokerole", typeof(RoleManipulation) },
-                { "delete", typeof(Remove) },
-                { "remove", typeof(Remove) },
-                { "kick", typeof(Kick) },
-                { "ban", typeof(Ban) }
+                { "ban",            typeof(Responses.Ban) },
+                { "kick",           typeof(Responses.Kick) },
+                { "say",            typeof(Responses.Say) },
+                { "send",           typeof(Responses.Say) },
+                { "delete",         typeof(Responses.Remove) },
+                { "remove",         typeof(Responses.Remove) },
+                { "report",         typeof(Responses.Report) },
+                { "addrole",        typeof(Responses.RoleManipulation) },
+                { "grantrole",      typeof(Responses.RoleManipulation) },
+                { "delrole",        typeof(Responses.RoleManipulation) },
+                { "removerole",     typeof(Responses.RoleManipulation) },
+                { "revokerole",     typeof(Responses.RoleManipulation) }
             });
 
-        public static Response[] ReadConfiguration(Rule r, IEnumerable<string> responses)
+        public static ResponseBase[] ReadConfiguration(ConfigItem r, IEnumerable<string> responses)
         {
-            var result = new List<Response>();
+            var result = new List<ResponseBase>();
             foreach (var line in responses)
             {
                 if (string.IsNullOrWhiteSpace(line))
@@ -84,7 +84,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
                 if (!_commands.TryGetValue(basecmd, out rt))
                     throw new RuleImportException($"'{basecmd}' is not a valid response");
 
-                var newresponse = Activator.CreateInstance(rt, r, line) as Response;
+                var newresponse = Activator.CreateInstance(rt, r, line) as ResponseBase;
                 if (newresponse == null)
                     throw new Exception("An unknown error occurred when attempting to create a new Response object.");
                 result.Add(newresponse);

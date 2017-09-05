@@ -1,6 +1,5 @@
 ﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
-using Noikoio.RegexBot.Feature.AutoMod.Responses;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -28,12 +27,12 @@ namespace Noikoio.RegexBot.Feature.AutoMod
         [ConfigSection("automod")]
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
-            List<Rule> rules = new List<Rule>();
+            List<ConfigItem> rules = new List<ConfigItem>();
 
             foreach (var def in configSection.Children<JProperty>())
             {
                 string label = def.Name;
-                var rule = new Rule(this, def);
+                var rule = new ConfigItem(this, def);
                 rules.Add(rule);
             }
             if (rules.Count > 0)
@@ -56,12 +55,12 @@ namespace Noikoio.RegexBot.Feature.AutoMod
             if (ch == null) return;
 
             // Get rules
-            var rules = GetConfig(ch.Guild.Id) as IEnumerable<Rule>;
+            var rules = GetConfig(ch.Guild.Id) as IEnumerable<ConfigItem>;
             if (rules == null) return;
 
             foreach (var rule in rules)
             {
-                // Checking for mod bypass here (Rule.Match isn't able to access mod list)
+                // Checking for mod bypass here (ConfigItem.Match isn't able to access mod list)
                 bool isMod = IsModerator(ch.Guild.Id, m);
                 await Task.Run(async () => await ProcessMessage(m, rule, isMod));
             }
@@ -70,14 +69,14 @@ namespace Noikoio.RegexBot.Feature.AutoMod
         /// <summary>
         /// Checks if the incoming message matches the given rule, and executes responses if necessary. 
         /// </summary>
-        private async Task ProcessMessage(SocketMessage m, Rule r, bool isMod)
+        private async Task ProcessMessage(SocketMessage m, ConfigItem r, bool isMod)
         {
             if (!r.Match(m, isMod)) return;
 
             // TODO make log optional; configurable
             await Log($"{r} triggered by {m.Author} in {((SocketGuildChannel)m.Channel).Guild.Name}/#{m.Channel.Name}");
 
-            foreach (Response resp in r.Response)
+            foreach (ResponseBase resp in r.Response)
             {
                 try
                 {

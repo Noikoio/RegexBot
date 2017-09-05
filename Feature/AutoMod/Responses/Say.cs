@@ -9,12 +9,12 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
     /// Sends a message to the given target.
     /// Parameters: say (target) (message)
     /// </summary>
-    class Say : Response
+    class Say : ResponseBase
     {
         private readonly string _target;
         private readonly string _payload;
 
-        public Say(Rule rule, string cmdline) : base(rule, cmdline)
+        public Say(ConfigItem rule, string cmdline) : base(rule, cmdline)
         {
             var line = cmdline.Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
             if (line.Length != 3) throw new RuleImportException("Incorrect number of parameters.");

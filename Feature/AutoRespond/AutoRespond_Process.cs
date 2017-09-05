@@ -6,7 +6,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
 {
     partial class AutoRespond
     {
-        private async Task ProcessMessage(SocketMessage msg, ResponseDefinition def)
+        private async Task ProcessMessage(SocketMessage msg, ConfigItem def)
         {
             // Check filters
             if (def.Filter.IsFiltered(msg)) return;
@@ -19,8 +19,8 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             
             await Log($"'{def.Label}' triggered by {msg.Author} in {((SocketGuildChannel)msg.Channel).Guild.Name}/#{msg.Channel.Name}");
             var (type, text) = def.Response;
-            if (type == ResponseDefinition.ResponseType.Reply) await ProcessReply(msg, text);
-            else if (type == ResponseDefinition.ResponseType.Exec) await ProcessExec(msg, text);
+            if (type == ConfigItem.ResponseType.Reply) await ProcessReply(msg, text);
+            else if (type == ConfigItem.ResponseType.Exec) await ProcessExec(msg, text);
         }
 
         private async Task ProcessReply(SocketMessage msg, string text)

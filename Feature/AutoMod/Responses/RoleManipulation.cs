@@ -10,7 +10,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
     /// Manipulates a given user's role.
     /// Parameters: (command) (target) (role ID)
     /// </summary>
-    class RoleManipulation : Response
+    class RoleManipulation : ResponseBase
     {
         enum ManipulationType { None, Add, Remove }
 
@@ -18,7 +18,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
         readonly string _target;
         readonly EntityName _role;
 
-        public RoleManipulation(Rule rule, string cmdline) : base(rule, cmdline)
+        public RoleManipulation(ConfigItem rule, string cmdline) : base(rule, cmdline)
         {
             var line = cmdline.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (line.Length != 3)

@@ -34,7 +34,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             if (ch == null) return;
 
             // TODO either search server by name or remove server name support entirely
-            var defs = GetConfig(ch.Guild.Id) as IEnumerable<ResponseDefinition>;
+            var defs = GetConfig(ch.Guild.Id) as IEnumerable<ConfigItem>;
             if (defs == null) return;
 
             foreach (var def in defs)
@@ -44,11 +44,11 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
         [ConfigSection("autoresponses")]
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
-            var responses = new List<ResponseDefinition>();
+            var responses = new List<ConfigItem>();
             foreach (var def in configSection.Children<JProperty>())
             {
                 // All validation is left to the constructor
-                var resp = new ResponseDefinition(def);
+                var resp = new ConfigItem(def);
                 responses.Add(resp);
             }
 

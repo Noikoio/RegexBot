@@ -2,7 +2,6 @@
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
-using Noikoio.RegexBot.Feature.AutoMod.Responses;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -15,12 +14,12 @@ namespace Noikoio.RegexBot.Feature.AutoMod
     /// Representation of a single AutoMod rule.
     /// Data stored within cannot be edited.
     /// </summary>
-    class Rule
+    class ConfigItem
     {
         readonly AutoMod _instance;
         readonly string _label;
         readonly IEnumerable<Regex> _regex;
-        readonly ICollection<Response> _responses;
+        readonly ICollection<ResponseBase> _responses;
         readonly FilterList _filter;
         readonly int _msgMinLength;
         readonly int _msgMaxLength;
@@ -29,7 +28,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod
 
         public string Label => _label;
         public IEnumerable<Regex> Regex => _regex;
-        public ICollection<Response> Response => _responses;
+        public ICollection<ResponseBase> Response => _responses;
         public FilterList Filter => _filter;
         public (int?, int?) MatchLengthMinMaxLimit => (_msgMinLength, _msgMaxLength);
         public bool AllowsModBypass => _modBypass;
@@ -41,7 +40,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod
         /// <summary>
         /// Creates a new Rule instance to represent the given configuration.
         /// </summary>
-        public Rule(AutoMod instance, JProperty definition)
+        public ConfigItem(AutoMod instance, JProperty definition)
         {
             _instance = instance;
 
@@ -123,11 +122,11 @@ namespace Noikoio.RegexBot.Feature.AutoMod
             {
                 if (rsconf.Type == JTokenType.Array)
                 {
-                    _responses = Responses.Response.ReadConfiguration(this, rsconf.Values<string>());
+                    _responses = ResponseBase.ReadConfiguration(this, rsconf.Values<string>());
                 }
                 else
                 {
-                    _responses = Responses.Response.ReadConfiguration(this, new string[] { rsconf.Value<string>() });
+                    _responses = ResponseBase.ReadConfiguration(this, new string[] { rsconf.Value<string>() });
                 }
             }
             catch (RuleImportException ex)

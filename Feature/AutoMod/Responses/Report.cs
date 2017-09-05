@@ -12,11 +12,11 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
     /// about the rule making use of this command, to the given target.
     /// Parameters: report (target)
     /// </summary>
-    class Report : Response
+    class Report : ResponseBase
     {
         readonly string _target;
 
-        public Report(Rule rule, string cmdline) : base(rule, cmdline)
+        public Report(ConfigItem rule, string cmdline) : base(rule, cmdline)
         {
             var line = cmdline.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (line.Length != 2) throw new RuleImportException("Incorrect number of parameters");

@@ -9,9 +9,9 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
     /// Kicks the invoking user.
     /// Takes no parameters.
     /// </summary>
-    class Kick : Response
+    class Kick : ResponseBase
     {
-        public Kick(Rule rule, string cmdline) : base(rule, cmdline)
+        public Kick(ConfigItem rule, string cmdline) : base(rule, cmdline)
         {
             // Throw exception if extra parameters found
             if (cmdline.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length > 1)

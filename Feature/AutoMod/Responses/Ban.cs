@@ -9,11 +9,11 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
     /// Bans the invoking user.
     /// Parameters: ban [days = 0]
     /// </summary>
-    class Ban : Response
+    class Ban : ResponseBase
     {
         readonly int _purgeDays;
 
-        public Ban(Rule rule, string cmdline) : base(rule, cmdline)
+        public Ban(ConfigItem rule, string cmdline) : base(rule, cmdline)
         {
             var line = cmdline.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (line.Length == 1)
