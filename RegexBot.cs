@@ -44,8 +44,9 @@ namespace Noikoio.RegexBot
             // Initialize features
             _features = new BotFeature[]
             {
-                new Feature.RegexResponder.EventProcessor(_client),
-                new Feature.ModTools.CommandListener(_client)
+                new Feature.AutoMod.AutoMod(_client),
+                new Feature.ModTools.CommandListener(_client),
+                new Feature.AutoRespond.AutoRespond(_client)
             };
             var dlog = Logger.GetLogger("Discord.Net");
             _client.Log += async (arg) =>
@@ -54,7 +55,8 @@ namespace Noikoio.RegexBot
                     arg.Message));
 
             // With features initialized, finish loading configuration
-            if (!_config.ReloadServerConfig().GetAwaiter().GetResult())
+            var conf = _config.ReloadServerConfig().Result;
+            if (conf == false)
             {
                 Console.WriteLine("Failed to load server configuration.");
 #if DEBUG

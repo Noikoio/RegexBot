@@ -18,6 +18,7 @@ namespace Noikoio.RegexBot
         private readonly AsyncLogger _logger;
         
         public abstract string Name { get; }
+        protected DiscordSocketClient Client => _client;
 
         protected BotFeature(DiscordSocketClient client)
         {
@@ -59,6 +60,20 @@ namespace Noikoio.RegexBot
 
             if (sc.FeatureConfigs.TryGetValue(this, out var item)) return item;
             else return null;
+        }
+
+        /// <summary>
+        /// Determines if the given message author or channel is in the server configuration's moderator list.
+        /// </summary>
+        protected bool IsModerator(ulong guildId, SocketMessage m)
+        {
+            var sc = RegexBot.Config.Servers.FirstOrDefault(g => g.Id == guildId);
+            if (sc == null)
+            {
+                throw new ArgumentException("There is no known configuration associated with the given Guild ID.");
+            }
+
+            return sc.Moderators.ExistsInList(m);
         }
         
         protected async Task Log(string text)

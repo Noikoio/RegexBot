@@ -7,8 +7,6 @@ using System.Linq;
 
 namespace Noikoio.RegexBot.ConfigItem
 {
-    enum FilterType { None, Whitelist, Blacklist }
-
     /// <summary>
     /// Represents a structure in bot configuration that contains a list of
     /// channels, roles, and users.
@@ -70,7 +68,7 @@ namespace Noikoio.RegexBot.ConfigItem
         /// </summary>
         /// <param name="msg">An incoming message.</param>
         /// <returns>
-        /// True if the <see cref="SocketMessage"/> occurred within a channel specified in this list,
+        /// True if '<paramref name="msg"/>' occurred within a channel specified in this list,
         /// or if the message author belongs to one or more roles in this list, or if the user itself
         /// is defined within this list.
         /// </returns>
@@ -124,26 +122,6 @@ namespace Noikoio.RegexBot.ConfigItem
 
             // No match.
             return false;
-        }
-
-        /// <summary>
-        /// Helper method for reading whitelist and blacklist filtering lists
-        /// </summary>
-        public static (FilterType, EntityList) GetFilterList(JObject section)
-        {
-            var mode = FilterType.None;
-            EntityList list;
-            if (section["whitelist"] != null) mode = FilterType.Whitelist;
-            if (section["blacklist"] != null)
-            {
-                if (mode == FilterType.Whitelist)
-                    throw new RuleImportException("Cannot have whitelist AND blacklist defined.");
-                mode = FilterType.Blacklist;
-            }
-            if (mode == FilterType.None) list = new EntityList(); // might even be fine to keep it null?
-            else list = new EntityList(section[mode == FilterType.Whitelist ? "whitelist" : "blacklist"]);
-
-            return (mode, list);
         }
     }
 }
