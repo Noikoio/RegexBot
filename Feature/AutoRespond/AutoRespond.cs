@@ -50,9 +50,10 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
                 // All validation is left to the constructor
                 var resp = new ResponseDefinition(def);
                 responses.Add(resp);
-                await Log($"Added definition '{resp.Label}'");
             }
 
+            if (responses.Count > 0)
+                await Log($"Loaded {responses.Count} definition(s) from configuration.");
             return responses.AsReadOnly();
         }
     }

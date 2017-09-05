@@ -35,9 +35,9 @@ namespace Noikoio.RegexBot.Feature.AutoMod
                 string label = def.Name;
                 var rule = new Rule(this, def);
                 rules.Add(rule);
-                await Log($"Added rule '{rule.Label}'");
             }
-            
+            if (rules.Count > 0)
+                await Log($"Loaded {rules.Count} rule(s) from configuration.");
             return rules.AsReadOnly();
         }
 
