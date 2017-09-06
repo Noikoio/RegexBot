@@ -2,7 +2,7 @@
 RegexBot is a standalone Discord moderation bot that makes use of the
 [Discord.Net](https://github.com/RogueException/Discord.Net) library.
 
-The goal of this project is to provice a bot that can truly fit your unique needs in managing Discord server.
+The goal of this project is to provide a bot that can truly fit your unique needs in managing Discord server.
 To that end, many aspects of the bot's behavior can be configured and fine-tuned, down to how it responds to
 rules that you have implemented.
 
