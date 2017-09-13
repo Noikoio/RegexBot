@@ -1,0 +1,12 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+section #title h1 {
+    // Compensating for removal of description line
+    margin-bottom: 18px;
+    // And some other adjustments so it doesn't look so odd by itself
+    text-align: left;
+    letter-spacing: 0.05em;
+}
