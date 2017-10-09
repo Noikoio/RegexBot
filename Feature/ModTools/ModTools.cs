@@ -14,12 +14,12 @@ namespace Noikoio.RegexBot.Feature.ModTools
     /// Entry point for the ModTools feature.
     /// This feature implements moderation commands that are defined and enabled in configuration.
     /// </summary>
-    // We are not using Discord.Net's Commands extension, as it doesn't allow for changes during runtime.
-    class CommandListener : BotFeature
+    // We are not using Discord.Net's Commands extension, as it does not allow for changes during runtime.
+    class ModTools : BotFeature
     {
         public override string Name => "ModTools";
         
-        public CommandListener(DiscordSocketClient client) : base(client)
+        public ModTools(DiscordSocketClient client) : base(client)
         {
             client.MessageReceived += Client_MessageReceived;
         }
@@ -67,44 +67,21 @@ namespace Noikoio.RegexBot.Feature.ModTools
         [ConfigSection("modtools")]
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
-            var newcmds = new Dictionary<string, CommandBase>(StringComparer.OrdinalIgnoreCase);
-            foreach (JObject definition in configSection)
-            {
-                string label = definition["label"].Value<string>();
-                if (string.IsNullOrWhiteSpace(label))
-                    throw new RuleImportException("A 'label' value was not specified in a command definition.");
+            var commands = new Dictionary<string, CommandBase>(StringComparer.OrdinalIgnoreCase);
 
-                string cmdinvoke = definition["command"].Value<string>();
-                if (string.IsNullOrWhiteSpace(cmdinvoke))
-                    throw new RuleImportException($"{label}: 'command' value was not specified.");
-                if (cmdinvoke.Contains(" "))
-                    throw new RuleImportException($"{label}: 'command' must not contain spaces.");
-                if (newcmds.TryGetValue(cmdinvoke, out var cmdexisting))
+            foreach (var def in configSection.Children<JProperty>())
+            {
+                string label = def.Name;
+                var cmd = CommandBase.CreateInstance(this, def);
+                if (commands.ContainsKey(cmd.Command))
                     throw new RuleImportException(
                         $"{label}: 'command' value must not be equal to that of another definition. " +
-                        $"Given value is being used for {cmdexisting.Label}.");
-                        
+                        $"Given value is being used for {commands[cmd.Command].Label}.");
 
-                string ctypestr = definition["type"].Value<string>();
-                if (string.IsNullOrWhiteSpace(ctypestr))
-                    throw new RuleImportException($"Value 'type' must be specified in definition for '{label}'.");
-                var ctype = CommandTypeAttribute.GetCommandType(ctypestr);
-
-                CommandBase cmd;
-                try
-                {
-                    cmd = (CommandBase)Activator.CreateInstance(ctype, this, definition);
-                }
-                catch (TargetInvocationException ex)
-                {
-                    if (ex.InnerException is RuleImportException)
-                        throw new RuleImportException($"Error in configuration for '{label}': {ex.InnerException.Message}");
-                    throw;
-                }
-                await Log($"'{label}' created; using command {cmdinvoke}");
-                newcmds.Add(cmdinvoke, cmd);
+                commands.Add(cmd.Command, cmd);
             }
-            return new ReadOnlyDictionary<string, CommandBase>(newcmds);
+            await Log($"Loaded {commands.Count} command definition(s).");
+            return new ReadOnlyDictionary<string, CommandBase>(commands);
         }
 
         public new Task Log(string text) => base.Log(text);
