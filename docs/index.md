@@ -30,7 +30,7 @@ The following must be installed:
 ### Build
 With the prerequisites installed, run the following commands:
 ```
-$ git clone git@github.com:Noikoio/RegexBot.git
+$ git clone {{ site.github.clone_url }}
 $ cd RegexBot
 $ dotnet public -c Release -o output
 ```
