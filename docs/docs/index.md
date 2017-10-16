@@ -5,7 +5,7 @@ Configuration takes the form of a JSON file name `settings.json`. Within this fi
 
 [Sample file for quick reference.](sample.html)
 
-Here is a list of all accepted values.
-* bot-token (*string*) - **Required.** Discord token used for connecting to the service.
-* playing (*string*) - String to display as the bot's "now playing" status message.
-* servers (*array*) - Takes an array of [server definitions](serverdef.html).
+The following is a list of all accepted values with links to pages explaining them in more detail.
+* bot-token *(string)* - **Required.** Discord token used for connecting to the service.
+* playing *(string)* - String to display as the bot's "now playing" status message.
+* servers *(array)* - Takes an array of unnamed [server definition](serverdef.html) objects.
