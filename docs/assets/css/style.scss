@@ -3,6 +3,10 @@
 
 @import "{{ site.theme }}";
 
+a {
+    border-bottom: 1px dashed #ffcc00;
+}
+
 section #title h1 {
     // Compensating for removal of description line
     margin-bottom: 18px;
@@ -10,15 +14,7 @@ section #title h1 {
     text-align: left;
     letter-spacing: 0.05em;
 }
+section #title span a { border-bottom: none; }
 
-code {
-    padding: 0px;
-}
-
-ul {
-    margin-bottom: 0px;
-}
-
-a {
-    border-bottom: 1px dashed #ffcc00;
-}
+code { padding: 0px; }
+ul { margin-bottom: 0px; }
