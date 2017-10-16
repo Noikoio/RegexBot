@@ -31,3 +31,5 @@ The following is a list of accepted members within an AutoMod rule:
   * For example: If a particular role is blocked from triggering the rule, you may add an exemption for a single user within that role to be able to trigger the rule.
 * AllowModBypass *(boolean)* - Specifies if those defined within the *moderators* list for the server should be exempt from triggering this rule. Defaults to *true*.
 
+#### Responses
+(to be written later)
