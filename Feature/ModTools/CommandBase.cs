@@ -42,7 +42,8 @@ namespace Noikoio.RegexBot.Feature.ModTools
             {
                 // Define all command types and their corresponding Types here
                 { "ban",        typeof(Commands.Ban) },
-                { "kick",       typeof(Commands.Kick) }
+                { "kick",       typeof(Commands.Kick) },
+                { "say",        typeof(Commands.Say) }
             });
 
         public static CommandBase CreateInstance(ModTools root, JProperty def)
