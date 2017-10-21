@@ -117,28 +117,16 @@ namespace Noikoio.RegexBot
             foreach (JObject sconf in conf["servers"].Children<JObject>())
             {
                 // Server name
-                if (sconf["name"] == null || string.IsNullOrWhiteSpace(sconf["name"].Value<string>()))
+                //if (sconf["id"] == null || sconf["id"].Type != JTokenType.Integer))
+                if (sconf["id"] == null)
                 {
-                    await Log("Error: Server definition is missing a name.");
+                    await Log("Error: Server ID is missing within definition.");
                     return false;
                 }
-                string snamestr = sconf["name"].Value<string>();
-                string sname;
-                ulong? sid;
-
-                int snseparator = snamestr.IndexOf("::");
-                if (ulong.TryParse(snamestr.Substring(0, snseparator), out var id))
-                {
-                    sid = id;
-                    sname = snamestr.Substring(snseparator + 2);
-                }
-                else
-                {
-                    sid = null;
-                    sname = snamestr;
-                }
+                ulong sid = sconf["id"].Value<ulong>();
+                string sname = sconf["name"]?.Value<string>();
                 
-                var SLog = Logger.GetLogger(LogPrefix + "/" + sname);
+                var SLog = Logger.GetLogger(LogPrefix + "/" + (sname ?? sid.ToString()));
 
                 // Load server moderator list
                 EntityList mods = new EntityList(sconf["moderators"]);
@@ -180,7 +168,7 @@ namespace Noikoio.RegexBot
 
                 // Switch to using new data
                 List<Tuple<Regex, string[]>> rulesfinal = new List<Tuple<Regex, string[]>>();
-                newservers.Add(new ServerConfig(sname, sid, mods, new ReadOnlyDictionary<BotFeature, object>(customConfs)));
+                newservers.Add(new ServerConfig(sid, mods, new ReadOnlyDictionary<BotFeature, object>(customConfs)));
             }
 
             _servers = newservers.ToArray();

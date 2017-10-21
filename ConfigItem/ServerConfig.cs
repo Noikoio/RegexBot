@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 namespace Noikoio.RegexBot.ConfigItem
@@ -9,25 +8,20 @@ namespace Noikoio.RegexBot.ConfigItem
     /// </summary>
     class ServerConfig
     {
-        private readonly string _name;
-        private ulong? _id;
+        private readonly ulong _id;
         private EntityList _moderators;
         private ReadOnlyDictionary<BotFeature, object> _featureData;
 
-        public string Name => _name;
-        public ulong? Id {
-            get => _id; set { if (!_id.HasValue) _id = value; }
-        }
+        public ulong? Id => _id;
         public EntityList Moderators => _moderators;
         public ReadOnlyDictionary<BotFeature, object> FeatureConfigs => _featureData;
 
-        public ServerConfig(string name, ulong? id, EntityList moderators, ReadOnlyDictionary<BotFeature, object> featureconf)
+        public ServerConfig(ulong id, EntityList moderators, ReadOnlyDictionary<BotFeature, object> featureconf)
         {
-            _name = name;
             _id = id;
             _moderators = moderators;
             _featureData = featureconf;
-            Debug.Assert(_name != null && _moderators != null);
+            Debug.Assert(_moderators != null && _featureData != null);
         }
     }
 }

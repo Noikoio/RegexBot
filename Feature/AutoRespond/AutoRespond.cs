@@ -34,8 +34,7 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
             // Determine channel type - if not a guild channel, stop.
             var ch = arg.Channel as SocketGuildChannel;
             if (ch == null) return;
-
-            // TODO either search server by name or remove server name support entirely
+            
             var defs = GetConfig(ch.Guild.Id) as IEnumerable<ConfigItem>;
             if (defs == null) return;
 
