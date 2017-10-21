@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 
 namespace Noikoio.RegexBot
 {
@@ -13,20 +14,19 @@ namespace Noikoio.RegexBot
             RegexBot rb = new RegexBot();
 
             Console.CancelKeyPress += rb.Console_CancelKeyPress;
-            //AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
             rb.Start().GetAwaiter().GetResult();
         }
-
-        // TODO Re-implement this once the framework allows for it again.
-        //private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
-        //{
-        //    var l = _logger.SetPrefix("Runtime");
-        //    string[] lines = Regex.Split(e.ExceptionObject.ToString(), "\r\n|\r|\n");
-        //    foreach (string line in lines)
-        //    {
-        //        l.Log(line).Wait();
-        //    }
-        //}
+        
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            var l = Logger.GetLogger("Runtime");
+            string[] lines = Regex.Split(e.ExceptionObject.ToString(), "\r\n|\r|\n");
+            foreach (string line in lines)
+            {
+                l(line).Wait();
+            }
+        }
     }
 }
