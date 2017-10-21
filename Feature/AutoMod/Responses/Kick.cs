@@ -22,7 +22,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod.Responses
         {
             var target = (SocketGuildUser)msg.Author;
             await target.KickAsync(Uri.EscapeDataString($"Rule '{Rule.Label}'"));
-            // TODO remove string escaping when fixed in library
+#warning Remove EscapeDataString call on next Discord.Net update
         }
     }
 }

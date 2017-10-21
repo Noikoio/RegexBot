@@ -91,7 +91,8 @@ namespace Noikoio.RegexBot.Feature.ModTools.Commands
 
             try
             {
-                if (reason != null) reason = Uri.EscapeDataString(reason); // TODO remove when fixed in library
+                if (reason != null) reason = Uri.EscapeDataString(reason);
+#warning Remove EscapeDataString call on next Discord.Net update
                 if (_mode == CommandMode.Ban) await g.AddBanAsync(targetuid, _purgeDays, reason);
                 else await targetobj.KickAsync(reason);
                 string resultmsg = BuildSuccessMessage(targetdisp);
