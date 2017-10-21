@@ -1,4 +1,4 @@
-##AutoMod
+## AutoMod
 
 AutoMod takes some inspiration from Reddit's [Automoderator](https://www.reddit.com/wiki/automoderator). It allows the user to define one or more *rules* based on regular expression (regex) patterns, in order for the bot to execute a *response* when triggered. This was initially the main and only feature of this bot, hence the name RegexBot.
 
@@ -20,7 +20,7 @@ Sample AutoMod rules:
 }
 ```
 
-#### Rules
+### Rules
 The following is a list of accepted members within an AutoMod rule:
 * regex (*string* or *string array*) - **Required.** Regular expression pattern(s) that trigger the defined rule.
 * response (*string* or *string array*) - **Required.** Response, or list of responses to execute.
@@ -31,5 +31,5 @@ The following is a list of accepted members within an AutoMod rule:
   * For example: If a particular role is blocked from triggering the rule, you may add an exemption for a single user within that role to be able to trigger the rule.
 * AllowModBypass *(boolean)* - Specifies if those defined within the *moderators* list for the server should be exempt from triggering this rule. Defaults to *true*.
 
-#### Responses
+### Responses
 (to be written later)
