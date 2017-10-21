@@ -76,11 +76,7 @@ namespace Noikoio.RegexBot
             await Task.Delay(-1);
         }
 
-        private async Task _client_Connected()
-        {
-            await _client.SetGameAsync(Config.CurrentGame);
-            // TODO add support for making use of server invites somewhere around here
-        }
+        private async Task _client_Connected() => await _client.SetGameAsync(Config.CurrentGame);
 
         // Defined within this class because a reference to the client is required
         public void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
