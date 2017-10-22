@@ -4,14 +4,14 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RootNamespace>Noikoio.RegexBot</RootNamespace>
-    <AssemblyVersion>2.1.1.0</AssemblyVersion>
+    <AssemblyVersion>2.2.0.0</AssemblyVersion>
     <Description>Highly configurable Discord moderation bot</Description>
     <Authors>Noikoio</Authors>
     <Company />
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DocumentationFile>bin\Release\netcoreapp1.1\RegexBot.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\netcoreapp2.0\RegexBot.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
