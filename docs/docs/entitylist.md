@@ -2,7 +2,7 @@
 
 An entity list is a JSON object with multiple values each containing arrays of strings. They are used in various places in the configuration to specify a number of users, roles, channels, or any combination thereof.
 
-Here is a sample of an entity list:
+The following is a sample of an entity list:
 ```
 {
     "users": [ "@000000000000::MyName", "That Guy Over There" ],
