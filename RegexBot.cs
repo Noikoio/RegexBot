@@ -34,6 +34,7 @@ namespace Noikoio.RegexBot
             _client = new DiscordSocketClient(new DiscordSocketConfig()
             {
                 LogLevel = LogSeverity.Info,
+                AlwaysDownloadUsers = true,
                 DefaultRetryMode = RetryMode.AlwaysRetry,
                 MessageCacheSize = 50
             });
