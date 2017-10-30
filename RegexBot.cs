@@ -47,7 +47,8 @@ namespace Noikoio.RegexBot
             {
                 new Feature.AutoMod.AutoMod(_client),
                 new Feature.ModTools.ModTools(_client),
-                new Feature.AutoRespond.AutoRespond(_client)
+                new Feature.AutoRespond.AutoRespond(_client),
+                new Feature.DBCache.DBCache(_client)
             };
             var dlog = Logger.GetLogger("Discord.Net");
             _client.Log += async (arg) =>
