@@ -20,6 +20,7 @@ namespace Noikoio.RegexBot
 
         private readonly RegexBot _bot;
         private readonly string _configPath;
+        private DatabaseConfig _dbConfig;
         private ServerConfig[] _servers;
 
         // The following values do not change on reload:
@@ -28,6 +29,8 @@ namespace Noikoio.RegexBot
 
         public string BotUserToken => _botToken;
         public string CurrentGame => _currentGame;
+        public DatabaseConfig Database => _dbConfig;
+
         public ServerConfig[] Servers => _servers;
 
         public Configuration(RegexBot bot)
@@ -83,6 +86,8 @@ namespace Noikoio.RegexBot
                 return false;
             }
             _currentGame = conf["playing"]?.Value<string>();
+
+            _dbConfig = new DatabaseConfig(conf["database"]);
 
             return true;
         }
