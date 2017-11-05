@@ -47,7 +47,7 @@ namespace Noikoio.RegexBot.ConfigItem
             _enabled = true;
         }
 
-        private async Task<NpgsqlConnection> P_OpenConnectionAsync(ulong? guildId = null)
+        public async Task<NpgsqlConnection> GetOpenConnectionAsync()
         {
             if (!Enabled) return null;
 
@@ -58,30 +58,10 @@ namespace Noikoio.RegexBot.ConfigItem
                 Password = _pass,
                 Database = _dbname
             };
-            if (guildId.HasValue) cs.SearchPath = "g_" + guildId.Value.ToString();
             
             var db = new NpgsqlConnection(cs.ToString());
             await db.OpenAsync();
             return db;
-        }
-        public Task<NpgsqlConnection> OpenConnectionAsync(ulong guildId) => P_OpenConnectionAsync(guildId);
-
-
-        public async Task CreateGuildSchemaAsync(ulong gid)
-        {
-            if (!Enabled) return;
-
-            const string cs = "CREATE SCHEMA IF NOT EXISTS {0}";
-
-            string sn = "g_" + gid.ToString();
-            using (var db = await P_OpenConnectionAsync())
-            {
-                using (var c = db.CreateCommand())
-                {
-                    c.CommandText = string.Format(cs, sn);
-                    await c.ExecuteNonQueryAsync();
-                }
-            }
         }
     }
 }

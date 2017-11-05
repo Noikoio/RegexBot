@@ -1,6 +1,7 @@
 ﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,10 +22,17 @@ namespace Noikoio.RegexBot.Feature.DBCache
         {
             _db = RegexBot.Config.Database;
 
-            client.GuildAvailable += Client_GuildAvailable;
-            client.GuildUpdated += Client_GuildUpdated;
-            client.GuildMemberUpdated += Client_GuildMemberUpdated;
-            // it may not be necessary to handle JoinedGuild, as GuildAvailable still provides info
+            if (_db.Enabled)
+            {
+                client.GuildAvailable += Client_GuildAvailable;
+                client.GuildUpdated += Client_GuildUpdated;
+                client.GuildMemberUpdated += Client_GuildMemberUpdated;
+                // it may not be necessary to handle JoinedGuild, as GuildAvailable provides this info
+            }
+            else
+            {
+                Log("No database storage available.").Wait();
+            }
         }
         
         public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
@@ -33,7 +41,6 @@ namespace Noikoio.RegexBot.Feature.DBCache
         // Guild _and_ guild member information has become available
         private async Task Client_GuildAvailable(SocketGuild arg)
         {
-            if (!_db.Enabled) return;
             await CreateCacheTables(arg.Id);
 
             await Task.Run(() => UpdateGuild(arg));
@@ -43,77 +50,107 @@ namespace Noikoio.RegexBot.Feature.DBCache
         // Guild information has changed
         private async Task Client_GuildUpdated(SocketGuild arg1, SocketGuild arg2)
         {
-            if (!_db.Enabled) return;
             await Task.Run(() => UpdateGuild(arg2));
         }
 
         // Guild member information has changed
         private async Task Client_GuildMemberUpdated(SocketGuildUser arg1, SocketGuildUser arg2)
         {
-            if (!_db.Enabled) return;
             await Task.Run(() => UpdateGuildMember(arg2));
         }
         #endregion
 
         #region Table setup
-        const string TableGuild = "cache_guild";
+        public const string TableGuild = "cache_guild";
         const string TableUser = "cache_users";
 
         private async Task CreateCacheTables(ulong gid)
         {
-            /* Note:
-             * We save information per guild in their own schemas named "g_NUM", where NUM is the Guild ID.
-             * 
-             * The creation of these schemas is handled within here, but we're possibly facing a short delay
-             * in the event that other events that we're listening for come in without a schema having been
-             * created yet in which to put them in.
-             * Got to figure that out.
-             */
-            await _db.CreateGuildSchemaAsync(gid);
-
-            using (var db = await _db.OpenConnectionAsync(gid))
+            using (var db = await _db.GetOpenConnectionAsync())
             {
-                Task<int> c1, c2;
-
-                // Uh... didn't think this through. For now this is a table that'll only ever have one column.
-                // Got to rethink this in particular.
                 using (var c = db.CreateCommand())
                 {
                     c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableGuild + "("
-                        + "snowflake bigint primary key, "
+                        + "guild_id bigint primary key, "
                         + "current_name text not null, "
                         + "display_name text null"
                         + ")";
-                    c1 = c.ExecuteNonQueryAsync();
+                    // TODO determine if other columns necessary?
+                    await c.ExecuteNonQueryAsync();
                 }
 
                 using (var c = db.CreateCommand())
                 {
                     c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableUser + "("
-                        + "snowflake bigint primary key, "
+                        + "user_id bigint, "
+                        + "guild_id bigint references " + TableGuild + " (guild_id), "
                         + "cache_date timestamptz not null, "
                         + "username text not null, "
                         + "discriminator text not null, "
                         + "nickname text null, "
                         + "avatar_url text null"
                         + ")";
-                    c2 = c.ExecuteNonQueryAsync();
+                    await c.ExecuteNonQueryAsync();
                 }
-
-                await c1;
-                await c2;
+                using (var c = db.CreateCommand())
+                {
+                    c.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS "
+                        + $"{TableUser}_idx on {TableUser} (user_id, guild_id)";
+                    await c.ExecuteNonQueryAsync();
+                }
             }
         }
         #endregion
         
         private async Task UpdateGuild(SocketGuild g)
         {
-            throw new NotImplementedException();
+            using (var db = await _db.GetOpenConnectionAsync())
+            {
+                using (var c = db.CreateCommand())
+                {
+                    c.CommandText = "INSERT INTO " + TableGuild + " (guild_id, current_name) "
+                        + "(@GuildId, @CurrentName) "
+                        + "ON CONFLICT (guild_id) DO UPDATE SET "
+                        + "current_name = EXCLUDED.current_name";
+                    c.Parameters.Add("@GuildID", NpgsqlDbType.Bigint).Value = g.Id;
+                    c.Parameters.Add("@CurrentName", NpgsqlDbType.Text).Value = g.Name;
+                    c.Prepare();
+                    await c.ExecuteNonQueryAsync();
+                }
+            }
         }
 
         private async Task UpdateGuildMember(ulong gid, IEnumerable<SocketGuildUser> users)
         {
-            throw new NotImplementedException();
+            using (var db = await _db.GetOpenConnectionAsync())
+            {
+                using (var c = db.CreateCommand())
+                {
+                    c.CommandText = "INSERT INTO " + TableUser + " VALUES "
+                        + "(@Uid, @Gid, @Date, @Uname, @Disc, @Nname, @Url) "
+                        + "ON CONFLICT (user_id, guild_id) DO UPDATE SET "
+                        + "cache_date = EXCLUDED.cache_date, username = EXCLUDED.username, "
+                        + "discriminator = EXCLUDED.discriminator, " // I've seen someone's discriminator change this one time...
+                        + "nickname = EXCLUDED.nickname, avatar_url = EXCLUDED.avatar_url";
+                    c.Prepare();
+
+                    var now = DateTime.Now;
+                    List<Task> inserts = new List<Task>();
+
+                    foreach (var item in users)
+                    {
+                        c.Parameters.Clear();
+                        c.Parameters.Add("@Uid", NpgsqlDbType.Bigint).Value = item.Id;
+                        c.Parameters.Add("@Gid", NpgsqlDbType.Bigint).Value = item.Guild.Id;
+                        c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = now;
+                        c.Parameters.Add("@Uname", NpgsqlDbType.Text).Value = item.Username;
+                        c.Parameters.Add("@Disc", NpgsqlDbType.Text).Value = item.Discriminator;
+                        c.Parameters.Add("@Nname", NpgsqlDbType.Text).Value = item.Nickname;
+                        c.Parameters.Add("@Url", NpgsqlDbType.Text).Value = item.GetAvatarUrl();
+                        await c.ExecuteNonQueryAsync();
+                    }
+                }
+            }
         }
 
         private Task UpdateGuildMember(SocketGuildUser user)
