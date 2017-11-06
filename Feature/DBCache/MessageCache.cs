@@ -1,12 +1,11 @@
 ﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Npgsql;
+using NpgsqlTypes;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.DBCaches
+namespace Noikoio.RegexBot.Feature.DBCache
 {
     /// <summary>
     /// Caches information regarding all incoming messages.
@@ -14,31 +13,38 @@ namespace Noikoio.RegexBot.Feature.DBCaches
     /// </summary>
     class MessageCache : BotFeature
     {
+        // TODO Something that clears expired cache items
         private readonly DatabaseConfig _db;
 
         public override string Name => nameof(MessageCache);
-
-        #region Table setup
-        const string TableGuild = "cache_guild";
-        const string TableUser = "cache_users";
-        const string TableMessage = "cache_messages";
 
         public MessageCache(DiscordSocketClient client) : base(client)
         {
             _db = RegexBot.Config.Database;
 
-            client.MessageReceived += Client_MessageReceived;
-            //client.MessageUpdated += Client_MessageUpdated;
+            if (_db.Enabled)
+            {
+                CreateCacheTables();
+
+                client.MessageReceived += Client_MessageReceived;
+                //client.MessageUpdated += Client_MessageUpdated;
+            }
+            else
+            {
+                Log("No database storage available.").Wait();
+            }
         }
 
+        #region Table setup
+        const string TableMessage = "cache_messages";
+        
         public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
 
         #region Event handling
         // A new message has been created
         private async Task Client_MessageReceived(SocketMessage arg)
         {
-            if (!_db.Enabled) return;
-            throw new NotImplementedException();
+            await Task.Run(() => CacheMessage(arg));
         }
         
         //private Task Client_MessageUpdated(Discord.Cacheable<Discord.IMessage, ulong> arg1, SocketMessage arg2, ISocketMessageChannel arg3)
@@ -50,28 +56,24 @@ namespace Noikoio.RegexBot.Feature.DBCaches
         */
         #endregion
 
-        private async Task CreateCacheTables(ulong gid)
+        private void CreateCacheTables()
         {
-            /* Note:
-             * We save information per guild in their own schemas named "g_NUM", where NUM is the Guild ID.
-             * 
-             * The creation of these schemas is handled within here, but we're possibly facing a short delay
-             * in the event that other events that we're listening for come in without a schema having been
-             * created yet in which to put them in.
-             * Got to figure that out.
-             */
-            await _db.CreateGuildSchemaAsync(gid);
-
-            using (var db = await _db.OpenConnectionAsync(gid))
+            using (var db = _db.GetOpenConnectionAsync().GetAwaiter().GetResult())
             {
                 using (var c = db.CreateCommand())
                 {
-                    c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableMessage + "("
-                        + "snowflake bigint primary key, "
-                        + "cache_date timestamptz not null, "
-                        + "author bigint not null"
+                    c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableMessage + " ("
+                        + "message_id bigint primary key, "
+                        + "author_id bigint not null, "
+                        + "guild_id bigint not null, "
+                        + "channel_id bigint not null, " // channel cache later? something to think about...
+                        + "created_ts timestamptz not null, "
+                        + "edited_ts timestamptz null, "
+                        + "message text not null, "
+                        + $"FOREIGN KEY (author_id, guild_id) references {EntityCache.TableUser} (user_id, guild_id)"
                         + ")";
-                    await c.ExecuteNonQueryAsync();
+                    // TODO figure out how to store message edits
+                    c.ExecuteNonQuery();
                 }
             }
         }
@@ -79,12 +81,30 @@ namespace Noikoio.RegexBot.Feature.DBCaches
 
         private async Task CacheMessage(SocketMessage msg)
         {
-            throw new NotImplementedException();
-        }
-
-        private async Task UpdateMessage(SocketMessage msg)
-        {
-            throw new NotImplementedException();
+            try
+            {
+                using (var db = await _db.GetOpenConnectionAsync())
+                {
+                    using (var c = db.CreateCommand())
+                    {
+                        c.CommandText = "INSERT INTO " + TableMessage
+                            + " (message_id, author_id, guild_id, channel_id, created_ts, message) VALUES "
+                            + "(@MessageId, @UserId, @GuildId, @ChannelId, @Date, @Message)";
+                        c.Parameters.Add("@MessageId", NpgsqlDbType.Bigint).Value = msg.Id;
+                        c.Parameters.Add("@UserId", NpgsqlDbType.Bigint).Value = msg.Author.Id;
+                        c.Parameters.Add("@GuildId", NpgsqlDbType.Bigint).Value = ((SocketGuildUser)msg.Author).Guild.Id;
+                        c.Parameters.Add("@ChannelId", NpgsqlDbType.Bigint).Value = msg.Channel.Id;
+                        c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = msg.Timestamp;
+                        c.Parameters.Add("@Message", NpgsqlDbType.Text).Value = msg.Content;
+                        c.Prepare();
+                        await c.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+            catch (NpgsqlException ex)
+            {
+                await Log($"SQL error in {nameof(CacheMessage)}: " + ex.Message);
+            }
         }
     }
 }

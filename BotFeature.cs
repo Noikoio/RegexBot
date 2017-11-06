@@ -20,7 +20,7 @@ namespace Noikoio.RegexBot
         public abstract string Name { get; }
         protected DiscordSocketClient Client => _client;
 
-        protected BotFeature(DiscordSocketClient client)
+        public BotFeature(DiscordSocketClient client)
         {
             _client = client;
             _logger = Logger.GetLogger(this.Name);

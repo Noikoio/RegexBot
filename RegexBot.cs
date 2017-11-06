@@ -36,7 +36,7 @@ namespace Noikoio.RegexBot
                 LogLevel = LogSeverity.Info,
                 AlwaysDownloadUsers = true,
                 DefaultRetryMode = RetryMode.AlwaysRetry,
-                MessageCacheSize = 50
+                MessageCacheSize = 0
             });
 
             // Hook up handlers for basic functions
@@ -48,7 +48,7 @@ namespace Noikoio.RegexBot
                 new Feature.AutoMod.AutoMod(_client),
                 new Feature.ModTools.ModTools(_client),
                 new Feature.AutoRespond.AutoRespond(_client),
-                new Feature.DBCache.EntityCache(_client),
+                new Feature.DBCache.EntityCache(_client), // EntityCache goes before anything else that uses its data
                 new Feature.DBCache.MessageCache(_client)
             };
             var dlog = Logger.GetLogger("Discord.Net");

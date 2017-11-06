@@ -1,6 +1,7 @@
 ﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
+using Npgsql;
 using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
@@ -24,6 +25,8 @@ namespace Noikoio.RegexBot.Feature.DBCache
 
             if (_db.Enabled)
             {
+                CreateCacheTables();
+
                 client.GuildAvailable += Client_GuildAvailable;
                 client.GuildUpdated += Client_GuildUpdated;
                 client.GuildMemberUpdated += Client_GuildMemberUpdated;
@@ -41,10 +44,12 @@ namespace Noikoio.RegexBot.Feature.DBCache
         // Guild _and_ guild member information has become available
         private async Task Client_GuildAvailable(SocketGuild arg)
         {
-            await CreateCacheTables(arg.Id);
-
-            await Task.Run(() => UpdateGuild(arg));
-            await Task.Run(() => UpdateGuildMember(arg.Id, arg.Users));
+            await Task.Run(async () =>
+            {
+                await UpdateGuild(arg);
+                await UpdateGuildMember(arg.Users);
+            }
+            );
         }
 
         // Guild information has changed
@@ -58,15 +63,15 @@ namespace Noikoio.RegexBot.Feature.DBCache
         {
             await Task.Run(() => UpdateGuildMember(arg2));
         }
-        #endregion
+#endregion
 
-        #region Table setup
+#region Table setup
         public const string TableGuild = "cache_guild";
-        const string TableUser = "cache_users";
+        public const string TableUser = "cache_users";
 
-        private async Task CreateCacheTables(ulong gid)
+        private void CreateCacheTables()
         {
-            using (var db = await _db.GetOpenConnectionAsync())
+            using (var db = _db.GetOpenConnectionAsync().GetAwaiter().GetResult())
             {
                 using (var c = db.CreateCommand())
                 {
@@ -75,81 +80,102 @@ namespace Noikoio.RegexBot.Feature.DBCache
                         + "current_name text not null, "
                         + "display_name text null"
                         + ")";
-                    // TODO determine if other columns necessary?
-                    await c.ExecuteNonQueryAsync();
+                    // TODO determine if other columns might be needed?
+                    c.ExecuteNonQuery();
                 }
 
                 using (var c = db.CreateCommand())
                 {
                     c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableUser + "("
-                        + "user_id bigint, "
-                        + "guild_id bigint references " + TableGuild + " (guild_id), "
+                        + "user_id bigint not null, "
+                        + $"guild_id bigint not null references {TableGuild}, "
                         + "cache_date timestamptz not null, "
                         + "username text not null, "
                         + "discriminator text not null, "
                         + "nickname text null, "
                         + "avatar_url text null"
                         + ")";
-                    await c.ExecuteNonQueryAsync();
+                    c.ExecuteNonQuery();
                 }
                 using (var c = db.CreateCommand())
                 {
                     c.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS "
                         + $"{TableUser}_idx on {TableUser} (user_id, guild_id)";
-                    await c.ExecuteNonQueryAsync();
+                    c.ExecuteNonQuery();
                 }
             }
         }
-        #endregion
+#endregion
         
         private async Task UpdateGuild(SocketGuild g)
         {
-            using (var db = await _db.GetOpenConnectionAsync())
+            try
             {
-                using (var c = db.CreateCommand())
+                using (var db = await _db.GetOpenConnectionAsync())
                 {
-                    c.CommandText = "INSERT INTO " + TableGuild + " (guild_id, current_name) "
-                        + "(@GuildId, @CurrentName) "
-                        + "ON CONFLICT (guild_id) DO UPDATE SET "
-                        + "current_name = EXCLUDED.current_name";
-                    c.Parameters.Add("@GuildID", NpgsqlDbType.Bigint).Value = g.Id;
-                    c.Parameters.Add("@CurrentName", NpgsqlDbType.Text).Value = g.Name;
-                    c.Prepare();
-                    await c.ExecuteNonQueryAsync();
-                }
-            }
-        }
-
-        private async Task UpdateGuildMember(ulong gid, IEnumerable<SocketGuildUser> users)
-        {
-            using (var db = await _db.GetOpenConnectionAsync())
-            {
-                using (var c = db.CreateCommand())
-                {
-                    c.CommandText = "INSERT INTO " + TableUser + " VALUES "
-                        + "(@Uid, @Gid, @Date, @Uname, @Disc, @Nname, @Url) "
-                        + "ON CONFLICT (user_id, guild_id) DO UPDATE SET "
-                        + "cache_date = EXCLUDED.cache_date, username = EXCLUDED.username, "
-                        + "discriminator = EXCLUDED.discriminator, " // I've seen someone's discriminator change this one time...
-                        + "nickname = EXCLUDED.nickname, avatar_url = EXCLUDED.avatar_url";
-                    c.Prepare();
-
-                    var now = DateTime.Now;
-                    List<Task> inserts = new List<Task>();
-
-                    foreach (var item in users)
+                    using (var c = db.CreateCommand())
                     {
-                        c.Parameters.Clear();
-                        c.Parameters.Add("@Uid", NpgsqlDbType.Bigint).Value = item.Id;
-                        c.Parameters.Add("@Gid", NpgsqlDbType.Bigint).Value = item.Guild.Id;
-                        c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = now;
-                        c.Parameters.Add("@Uname", NpgsqlDbType.Text).Value = item.Username;
-                        c.Parameters.Add("@Disc", NpgsqlDbType.Text).Value = item.Discriminator;
-                        c.Parameters.Add("@Nname", NpgsqlDbType.Text).Value = item.Nickname;
-                        c.Parameters.Add("@Url", NpgsqlDbType.Text).Value = item.GetAvatarUrl();
+                        c.CommandText = "INSERT INTO " + TableGuild + " (guild_id, current_name) "
+                            + "VALUES (@GuildId, @CurrentName) "
+                            + "ON CONFLICT (guild_id) DO UPDATE SET "
+                            + "current_name = EXCLUDED.current_name";
+                        c.Parameters.Add("@GuildId", NpgsqlDbType.Bigint).Value = g.Id;
+                        c.Parameters.Add("@CurrentName", NpgsqlDbType.Text).Value = g.Name;
+                        c.Prepare();
                         await c.ExecuteNonQueryAsync();
                     }
                 }
+            }
+            catch (NpgsqlException ex)
+            {
+                await Log($"SQL error in {nameof(UpdateGuild)}: " + ex.Message);
+            }
+        }
+
+        private async Task UpdateGuildMember(IEnumerable<SocketGuildUser> users)
+        {
+            try
+            {
+                using (var db = await _db.GetOpenConnectionAsync())
+                {
+                    using (var c = db.CreateCommand())
+                    {
+                        c.CommandText = "INSERT INTO " + TableUser
+                            + " (user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url)"
+                            + " VALUES (@Uid, @Gid, @Date, @Uname, @Disc, @Nname, @Url) "
+                            + "ON CONFLICT (user_id, guild_id) DO UPDATE SET "
+                            + "cache_date = EXCLUDED.cache_date, username = EXCLUDED.username, "
+                            + "discriminator = EXCLUDED.discriminator, " // I've seen someone's discriminator change this one time...
+                            + "nickname = EXCLUDED.nickname, avatar_url = EXCLUDED.avatar_url";
+                        
+                        var uid = c.Parameters.Add("@Uid", NpgsqlDbType.Bigint);
+                        var gid = c.Parameters.Add("@Gid", NpgsqlDbType.Bigint);
+                        c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = DateTime.Now;
+                        var uname = c.Parameters.Add("@Uname", NpgsqlDbType.Text);
+                        var disc = c.Parameters.Add("@Disc", NpgsqlDbType.Text);
+                        var nname = c.Parameters.Add("@Nname", NpgsqlDbType.Text);
+                        var url = c.Parameters.Add("@Url", NpgsqlDbType.Text);
+                        c.Prepare();
+
+                        foreach (var item in users)
+                        {
+                            uid.Value = item.Id;
+                            gid.Value = item.Guild.Id;
+                            uname.Value = item.Username;
+                            disc.Value = item.Discriminator;
+                            nname.Value = item.Nickname;
+                            if (nname.Value == null) nname.Value = DBNull.Value; // why can't ?? work here?
+                            url.Value = item.GetAvatarUrl();
+                            if (url.Value == null) url.Value = DBNull.Value;
+
+                            await c.ExecuteNonQueryAsync();
+                        }
+                    }
+                }
+            }
+            catch (NpgsqlException ex)
+            {
+                await Log($"SQL error in {nameof(UpdateGuildMember)}: " + ex.Message);
             }
         }
 
@@ -157,7 +183,7 @@ namespace Noikoio.RegexBot.Feature.DBCache
         {
             var gid = user.Guild.Id;
             var ml = new SocketGuildUser[] { user };
-            return UpdateGuildMember(gid, ml);
+            return UpdateGuildMember(ml);
         }
     }
 }
