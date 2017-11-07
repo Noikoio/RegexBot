@@ -7,11 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.DBCache
+namespace Noikoio.RegexBot.Feature.EntityCache
 {
     /// <summary>
     /// Caches information regarding all known guilds, channels, and users.
     /// The function of this feature should be transparent to the user, and thus no configuration is needed.
+    /// This feature should be initialized BEFORE any other features that make use of guild and user cache.
     /// </summary>
     class EntityCache : BotFeature
     {
@@ -159,6 +160,8 @@ namespace Noikoio.RegexBot.Feature.DBCache
 
                         foreach (var item in users)
                         {
+                            if (item.IsBot || item.IsWebhook) continue;
+
                             uid.Value = item.Id;
                             gid.Value = item.Guild.Id;
                             uname.Value = item.Username;
