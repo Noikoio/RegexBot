@@ -26,7 +26,7 @@ namespace Noikoio.RegexBot.Feature.EntityCache
 
             if (_db.Enabled)
             {
-                CreateCacheTables();
+                Sql.CreateCacheTables();
 
                 client.GuildAvailable += Client_GuildAvailable;
                 client.GuildUpdated += Client_GuildUpdated;
@@ -67,45 +67,7 @@ namespace Noikoio.RegexBot.Feature.EntityCache
 #endregion
 
 #region Table setup
-        public const string TableGuild = "cache_guild";
-        public const string TableUser = "cache_users";
-
-        private void CreateCacheTables()
-        {
-            using (var db = _db.GetOpenConnectionAsync().GetAwaiter().GetResult())
-            {
-                using (var c = db.CreateCommand())
-                {
-                    c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableGuild + "("
-                        + "guild_id bigint primary key, "
-                        + "current_name text not null, "
-                        + "display_name text null"
-                        + ")";
-                    // TODO determine if other columns might be needed?
-                    c.ExecuteNonQuery();
-                }
-
-                using (var c = db.CreateCommand())
-                {
-                    c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableUser + "("
-                        + "user_id bigint not null, "
-                        + $"guild_id bigint not null references {TableGuild}, "
-                        + "cache_date timestamptz not null, "
-                        + "username text not null, "
-                        + "discriminator text not null, "
-                        + "nickname text null, "
-                        + "avatar_url text null"
-                        + ")";
-                    c.ExecuteNonQuery();
-                }
-                using (var c = db.CreateCommand())
-                {
-                    c.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS "
-                        + $"{TableUser}_idx on {TableUser} (user_id, guild_id)";
-                    c.ExecuteNonQuery();
-                }
-            }
-        }
+        
 #endregion
         
         private async Task UpdateGuild(SocketGuild g)
@@ -116,7 +78,7 @@ namespace Noikoio.RegexBot.Feature.EntityCache
                 {
                     using (var c = db.CreateCommand())
                     {
-                        c.CommandText = "INSERT INTO " + TableGuild + " (guild_id, current_name) "
+                        c.CommandText = "INSERT INTO " + Sql.TableGuild + " (guild_id, current_name) "
                             + "VALUES (@GuildId, @CurrentName) "
                             + "ON CONFLICT (guild_id) DO UPDATE SET "
                             + "current_name = EXCLUDED.current_name";
@@ -141,7 +103,7 @@ namespace Noikoio.RegexBot.Feature.EntityCache
                 {
                     using (var c = db.CreateCommand())
                     {
-                        c.CommandText = "INSERT INTO " + TableUser
+                        c.CommandText = "INSERT INTO " + Sql.TableUser
                             + " (user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url)"
                             + " VALUES (@Uid, @Gid, @Date, @Uname, @Disc, @Nname, @Url) "
                             + "ON CONFLICT (user_id, guild_id) DO UPDATE SET "
