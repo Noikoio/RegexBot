@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.AutoRespond
+namespace Noikoio.RegexBot.Module.AutoRespond
 {
     /// <summary>
     /// Similar to <see cref="AutoMod"/>, but lightweight.
@@ -19,9 +19,9 @@ namespace Noikoio.RegexBot.Feature.AutoRespond
     /// </list>
     /// </para>
     /// </summary>
-    partial class AutoRespond : BotFeature
+    partial class AutoRespond : BotModule
     {
-        #region BotFeature implementation
+        #region BotModule implementation
         public override string Name => "AutoRespond";
 
         public AutoRespond(DiscordSocketClient client) : base(client)

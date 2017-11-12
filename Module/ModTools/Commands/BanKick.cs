@@ -6,7 +6,7 @@ using System;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.ModTools.Commands
+namespace Noikoio.RegexBot.Module.ModTools.Commands
 {
     
     class BanKick : CommandBase

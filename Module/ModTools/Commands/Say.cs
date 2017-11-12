@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.ModTools.Commands
+namespace Noikoio.RegexBot.Module.ModTools.Commands
 {
     class Say : CommandBase
     {

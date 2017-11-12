@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.AutoMod
+namespace Noikoio.RegexBot.Module.AutoMod
 {
     /// <summary>
     /// Implements per-message regex matching and executes customizable responses.
@@ -14,7 +14,7 @@ namespace Noikoio.RegexBot.Feature.AutoMod
     /// Strictly for use as a moderation tool only. Triggers that simply reply to messages
     /// should be implemented using <see cref="AutoRespond"/>.
     /// </remarks>
-    class AutoMod : BotFeature
+    class AutoMod : BotModule
     {
         public override string Name => "AutoMod";
 

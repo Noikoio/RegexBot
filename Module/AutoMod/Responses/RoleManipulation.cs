@@ -4,7 +4,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.AutoMod.Responses
+namespace Noikoio.RegexBot.Module.AutoMod.Responses
 {
     /// <summary>
     /// Manipulates a given user's role.

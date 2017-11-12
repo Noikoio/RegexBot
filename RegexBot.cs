@@ -7,16 +7,16 @@ using System.Threading.Tasks;
 namespace Noikoio.RegexBot
 {
     /// <summary>
-    /// Main class. On start, initializes bot features and passes the DiscordSocketClient to them
+    /// Main class. On start, initializes bot modules and passes the DiscordSocketClient to them
     /// </summary>
     class RegexBot
     {
         private static Configuration _config;
         private readonly DiscordSocketClient _client;
-        private BotFeature[] _features;
+        private BotModule[] _modules;
 
         internal static Configuration Config => _config;
-        internal IEnumerable<BotFeature> Features => _features;
+        internal IEnumerable<BotModule> Modules => _modules;
         
         internal RegexBot()
         {
@@ -42,13 +42,13 @@ namespace Noikoio.RegexBot
             // Hook up handlers for basic functions
             _client.Connected += _client_Connected;
 
-            // Initialize features
-            _features = new BotFeature[]
+            // Initialize modules
+            _modules = new BotModule[]
             {
-                new Feature.AutoMod.AutoMod(_client),
-                new Feature.ModTools.ModTools(_client),
-                new Feature.AutoRespond.AutoRespond(_client),
-                new Feature.EntityCache.EntityCache(_client) // EntityCache goes before anything else that uses its data
+                new Module.AutoMod.AutoMod(_client),
+                new Module.ModTools.ModTools(_client),
+                new Module.AutoRespond.AutoRespond(_client),
+                new Module.EntityCache.EntityCache(_client) // EntityCache goes before anything else that uses its data
             };
             var dlog = Logger.GetLogger("Discord.Net");
             _client.Log += async (arg) =>
@@ -56,7 +56,7 @@ namespace Noikoio.RegexBot
                     String.Format("{0}: {1}{2}", arg.Source, ((int)arg.Severity < 3 ? arg.Severity + ": " : ""),
                     arg.Message));
 
-            // With features initialized, finish loading configuration
+            // With modules initialized, finish loading configuration
             var conf = _config.ReloadServerConfig().Result;
             if (conf == false)
             {

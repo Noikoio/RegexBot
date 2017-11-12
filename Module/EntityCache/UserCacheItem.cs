@@ -4,7 +4,7 @@ using System.Data.Common;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.EntityCache
+namespace Noikoio.RegexBot.Module.EntityCache
 {
     /// <summary>
     /// Represents a cached user.

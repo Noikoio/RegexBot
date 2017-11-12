@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Noikoio.RegexBot.Feature.AutoRespond
+namespace Noikoio.RegexBot.Module.AutoRespond
 {
     /// <summary>
     /// Represents a single autoresponse definition.

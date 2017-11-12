@@ -3,7 +3,7 @@ using Noikoio.RegexBot.ConfigItem;
 using System;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.AutoMod.Responses
+namespace Noikoio.RegexBot.Module.AutoMod.Responses
 {
     /// <summary>
     /// Sends a message to the given target.

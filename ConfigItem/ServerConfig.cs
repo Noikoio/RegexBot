@@ -10,18 +10,18 @@ namespace Noikoio.RegexBot.ConfigItem
     {
         private readonly ulong _id;
         private EntityList _moderators;
-        private ReadOnlyDictionary<BotFeature, object> _featureData;
+        private ReadOnlyDictionary<BotModule, object> _modData;
 
         public ulong? Id => _id;
         public EntityList Moderators => _moderators;
-        public ReadOnlyDictionary<BotFeature, object> FeatureConfigs => _featureData;
+        public ReadOnlyDictionary<BotModule, object> ModuleConfigs => _modData;
 
-        public ServerConfig(ulong id, EntityList moderators, ReadOnlyDictionary<BotFeature, object> featureconf)
+        public ServerConfig(ulong id, EntityList moderators, ReadOnlyDictionary<BotModule, object> modconf)
         {
             _id = id;
             _moderators = moderators;
-            _featureData = featureconf;
-            Debug.Assert(_moderators != null && _featureData != null);
+            _modData = modconf;
+            Debug.Assert(_moderators != null && _modData != null);
         }
     }
 }

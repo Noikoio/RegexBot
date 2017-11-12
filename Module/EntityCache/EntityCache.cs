@@ -7,14 +7,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.EntityCache
+namespace Noikoio.RegexBot.Module.EntityCache
 {
     /// <summary>
     /// Caches information regarding all known guilds, channels, and users.
-    /// The function of this feature should be transparent to the user, and thus no configuration is needed.
-    /// This feature should be initialized BEFORE any other features that make use of guild and user cache.
+    /// The function of this module should be transparent to the user, and thus no configuration is needed.
+    /// This module should be initialized BEFORE any other modules that make use of guild and user cache.
     /// </summary>
-    class EntityCache : BotFeature
+    class EntityCache : BotModule
     {
         private readonly DatabaseConfig _db;
 
@@ -24,7 +24,7 @@ namespace Noikoio.RegexBot.Feature.EntityCache
         {
             _db = RegexBot.Config.Database;
 
-            if (_db.Enabled)
+            if (_db.Available)
             {
                 Sql.CreateCacheTables();
 

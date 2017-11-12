@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.ModTools
+namespace Noikoio.RegexBot.Module.ModTools
 {
     [DebuggerDisplay("{Label}-type command")]
     abstract class CommandBase

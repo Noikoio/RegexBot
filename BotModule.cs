@@ -7,12 +7,9 @@ using System.Threading.Tasks;
 namespace Noikoio.RegexBot
 {
     /// <summary>
-    /// Base class for bot features
+    /// Base class for bot modules
     /// </summary>
-    /// <remarks>
-    /// This may have use in some sort of external plugin system later.
-    /// </remarks>
-    abstract class BotFeature
+    abstract class BotModule
     {
         private readonly DiscordSocketClient _client;
         private readonly AsyncLogger _logger;
@@ -20,20 +17,20 @@ namespace Noikoio.RegexBot
         public abstract string Name { get; }
         protected DiscordSocketClient Client => _client;
 
-        public BotFeature(DiscordSocketClient client)
+        public BotModule(DiscordSocketClient client)
         {
             _client = client;
             _logger = Logger.GetLogger(this.Name);
         }
 
         /// <summary>
-        /// Processes feature-specific configuration.
+        /// Processes module-specific configuration.
         /// </summary>
         /// <remarks>
-        /// Feature code <i>should not</i> hold on to this data, but instead use <see cref="GetConfig(ulong)"/> to retrieve
+        /// Module code <i>should not</i> hold on to this data, but instead use <see cref="GetConfig(ulong)"/> to retrieve
         /// them. This is in the event that configuration is reverted to an earlier state and allows for the
-        /// bot and all features to revert to previously used configuration values with no effort on the part
-        /// of individual features.
+        /// all modules to revert to previously used configuration values with no effort on the part of the
+        /// module code itself.
         /// </remarks>
         /// <returns>
         /// Processed configuration data prepared for later use.
@@ -45,7 +42,7 @@ namespace Noikoio.RegexBot
         public abstract Task<object> ProcessConfiguration(JToken configSection);
 
         /// <summary>
-        /// Gets this feature's relevant configuration data associated with the given Discord guild.
+        /// Gets this module's relevant configuration data associated with the given Discord guild.
         /// </summary>
         /// <returns>
         /// The stored configuration data, or null if none exists.
@@ -58,7 +55,7 @@ namespace Noikoio.RegexBot
                 throw new ArgumentException("There is no known configuration associated with the given Guild ID.");
             }
 
-            if (sc.FeatureConfigs.TryGetValue(this, out var item)) return item;
+            if (sc.ModuleConfigs.TryGetValue(this, out var item)) return item;
             else return null;
         }
 
@@ -88,7 +85,7 @@ namespace Noikoio.RegexBot
 
     /// <summary>
     /// Indicates which section under an individual Discord guild configuration should be passed to the
-    /// feature's <see cref="BotFeature.ProcessConfiguration(JToken)"/> method during configuration load.
+    /// module's <see cref="BotModule.ProcessConfiguration(JToken)"/> method during configuration load.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, Inherited = false)]
     public class ConfigSectionAttribute : Attribute

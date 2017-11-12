@@ -8,14 +8,14 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.ModTools
+namespace Noikoio.RegexBot.Module.ModTools
 {
     /// <summary>
-    /// Entry point for the ModTools feature.
-    /// This feature implements moderation commands that are defined and enabled in configuration.
+    /// ModTools module object.
+    /// Implements moderation commands that are individually defined and enabled in configuration.
     /// </summary>
     // We are not using Discord.Net's Commands extension, as it does not allow for changes during runtime.
-    class ModTools : BotFeature
+    class ModTools : BotModule
     {
         public override string Name => "ModTools";
         

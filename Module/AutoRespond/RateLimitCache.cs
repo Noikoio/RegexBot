@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Noikoio.RegexBot.Feature.AutoRespond
+namespace Noikoio.RegexBot.Module.AutoRespond
 {
     /// <summary>
     /// Stores rate limit settings and caches.

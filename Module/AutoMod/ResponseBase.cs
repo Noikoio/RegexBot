@@ -7,7 +7,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.AutoMod
+namespace Noikoio.RegexBot.Module.AutoMod
 {
     /// <summary>
     /// Base class for all Response classes.

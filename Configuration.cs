@@ -137,9 +137,9 @@ namespace Noikoio.RegexBot
                 EntityList mods = new EntityList(sconf["moderators"]);
                 if (sconf["moderators"] != null) await SLog("Moderator " + mods.ToString());
                 
-                // Load feature configurations
-                Dictionary<BotFeature, object> customConfs = new Dictionary<BotFeature, object>();
-                foreach (var item in _bot.Features)
+                // Load module configurations
+                Dictionary<BotModule, object> customConfs = new Dictionary<BotModule, object>();
+                foreach (var item in _bot.Modules)
                 {
                     var attr = item.GetType().GetTypeInfo()
                         .GetMethod("ProcessConfiguration").GetCustomAttribute<ConfigSectionAttribute>();
@@ -173,7 +173,7 @@ namespace Noikoio.RegexBot
 
                 // Switch to using new data
                 List<Tuple<Regex, string[]>> rulesfinal = new List<Tuple<Regex, string[]>>();
-                newservers.Add(new ServerConfig(sid, mods, new ReadOnlyDictionary<BotFeature, object>(customConfs)));
+                newservers.Add(new ServerConfig(sid, mods, new ReadOnlyDictionary<BotModule, object>(customConfs)));
             }
 
             _servers = newservers.ToArray();

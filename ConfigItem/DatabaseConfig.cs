@@ -14,9 +14,9 @@ namespace Noikoio.RegexBot.ConfigItem
         private readonly string _parsemsg;
 
         /// <summary>
-        /// Gets whether database features are enabled.
+        /// Gets whether database storage is available.
         /// </summary>
-        public bool Enabled => _enabled;
+        public bool Available => _enabled;
         /// <summary>
         /// Constructor error message (only if not enabled)
         /// </summary>
@@ -49,7 +49,7 @@ namespace Noikoio.RegexBot.ConfigItem
 
         public async Task<NpgsqlConnection> GetOpenConnectionAsync()
         {
-            if (!Enabled) return null;
+            if (!Available) return null;
 
             var cs = new NpgsqlConnectionStringBuilder()
             {

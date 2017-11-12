@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Noikoio.RegexBot.Feature.EntityCache
+namespace Noikoio.RegexBot.Module.EntityCache
 {
     /// <summary>
     /// Contains common constants and static methods for cache access.

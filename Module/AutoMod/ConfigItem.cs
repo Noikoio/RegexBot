@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Feature.AutoMod
+namespace Noikoio.RegexBot.Module.AutoMod
 {
     /// <summary>
     /// Representation of a single AutoMod rule.
