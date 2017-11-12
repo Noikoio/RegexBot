@@ -70,7 +70,7 @@ namespace Noikoio.RegexBot.Feature.DBCache
                         + "created_ts timestamptz not null, "
                         + "edited_ts timestamptz null, "
                         + "message text not null, "
-                        + $"FOREIGN KEY (author_id, guild_id) references {EntityCache.TableUser} (user_id, guild_id)"
+                        + $"FOREIGN KEY (author_id, guild_id) references {EntityCache.Sql.TableUser} (user_id, guild_id)"
                         + ")";
                     // TODO figure out how to store message edits
                     c.ExecuteNonQuery();
