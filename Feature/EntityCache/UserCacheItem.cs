@@ -41,7 +41,7 @@ namespace Noikoio.RegexBot.Feature.EntityCache
         /// </summary>
         public string Mention => $"<@{_userId}>";
         /// <summary>
-        /// User's cached nickname in the guild, if any.
+        /// User's cached nickname in the guild. May be null.
         /// </summary>
         public string Nickname => _nickname;
         /// <summary>
@@ -70,8 +70,8 @@ namespace Noikoio.RegexBot.Feature.EntityCache
             _cacheDate = r.GetDateTime(2).ToUniversalTime();
             _username = r.GetString(3);
             _discriminator = r.GetString(4);
-            _nickname = r.GetString(5);
-            _avatarUrl = r.GetString(6);
+            _nickname = r.IsDBNull(5) ? null : r.GetString(5);
+            _avatarUrl = r.IsDBNull(6) ? null : r.GetString(6);
         }
 
         public override string ToString() => DisplayName;
@@ -115,14 +115,15 @@ namespace Noikoio.RegexBot.Feature.EntityCache
         /// Attempts to look up the user given a search string.
         /// This string looks up case-insensitive, exact matches of nicknames and usernames.
         /// </summary>
-        /// <param name="search"></param>
         /// <returns>An <see cref="IEnumerable{T}"/> containing zero or more query results, sorted by cache date.</returns>
         public static async Task<IEnumerable<UserCacheItem>> QueryAsync(ulong guild, string search)
         {
             // Is search just a number? It's an ID.
             if (ulong.TryParse(search, out var presult))
             {
-                return new UserCacheItem[] { await QueryAsync(guild, presult) };
+                var r = await QueryAsync(guild, presult);
+                if (r == null) return new UserCacheItem[0];
+                else return new UserCacheItem[] { r };
             }
 
             string name;

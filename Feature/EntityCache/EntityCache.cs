@@ -38,7 +38,7 @@ namespace Noikoio.RegexBot.Feature.EntityCache
                 Log("No database storage available.").Wait();
             }
         }
-        
+
         public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
 
         #region Event handling
