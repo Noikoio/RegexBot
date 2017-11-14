@@ -80,7 +80,7 @@ namespace Noikoio.RegexBot.Module.AutoMod.Responses
             {
                 Name = "Additional info",
                 Value = $"Username: {msg.Author.Mention}\n"
-                + $"Channel: <#{msg.Channel.Id}> #{msg.Channel.Name} ({msg.Channel.Id})\n"
+                + $"Channel: <#{msg.Channel.Id}> #{msg.Channel.Name}\n"
                 + $"Message ID: {msg.Id}"
             }).AddField(new EmbedFieldBuilder()
             {
