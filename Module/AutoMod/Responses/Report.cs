@@ -37,29 +37,40 @@ namespace Noikoio.RegexBot.Module.AutoMod.Responses
         {
             string invokeLine = msg.Content;
 
-            var responsebody = new StringBuilder();
-            responsebody.AppendLine("```");
-            foreach (var item in Rule.Response)
-            {
-                responsebody.AppendLine(item.CmdLine.Replace("\r", "").Replace("\n", "\\n"));
-            }
-            responsebody.Append("```");
-
             // Discord has a 2000 character limit per single message.
-            // Enforcing separate length limits on line and response.
-            const int DescriptionLengthMax = 1600;
-            const int ResponseBodyLengthMax = 200;
+            // Priority is to show as much of the offending line as possible, to a point.
+            const int DescriptionLengthMax = 1700; // leaving 300 buffer for embed formatting data
+            bool showResponseBody = true;
+
             if (invokeLine.Length > DescriptionLengthMax)
             {
+                // Do not attempt to show response body.
+                showResponseBody = false;
+
                 invokeLine = $"**Message length too long; showing first {DescriptionLengthMax} characters.**\n\n"
                     + invokeLine.Substring(0, DescriptionLengthMax);
             }
-            if (responsebody.Length > ResponseBodyLengthMax)
+
+            string responsebody = null;
+            if (showResponseBody)
             {
-                responsebody = new StringBuilder("(Response body too large to display.)");
+                // Write a summary of responses defined
+                var frb = new StringBuilder();
+                foreach (var item in Rule.Response)
+                {
+                    frb.AppendLine("`" + item.CmdLine.Replace("\r", "").Replace("\n", "\\n") + "`");
+                }
+
+                responsebody = frb.ToString();
+                if (invokeLine.Length + responsebody.Length > DescriptionLengthMax)
+                {
+                    // Still can't do it, so just don't.
+                    responsebody = null;
+                }
             }
 
-            return new EmbedBuilder()
+
+            var finalem = new EmbedBuilder()
             {
                 Color = new Color(0xEDCE00), // configurable later?
 
@@ -78,16 +89,22 @@ namespace Noikoio.RegexBot.Module.AutoMod.Responses
                 Timestamp = msg.EditedTimestamp ?? msg.Timestamp
             }.AddField(new EmbedFieldBuilder()
             {
-                Name = "Additional info",
+                Name = "Context",
                 Value = $"Username: {msg.Author.Mention}\n"
                 + $"Channel: <#{msg.Channel.Id}> #{msg.Channel.Name}\n"
                 + $"Message ID: {msg.Id}"
-            }).AddField(new EmbedFieldBuilder()
-            {
-                // TODO consider replacing with configurable note. this section is a bit too much
-                Name = "Executing response:",
-                Value = responsebody.ToString()
             });
+            
+            if (responsebody != null)
+            {
+                finalem = finalem.AddField(new EmbedFieldBuilder()
+                {
+                    Name = "Response:",
+                    Value = responsebody.ToString()
+                });
+            }
+            
+            return finalem;
         }
     }
 }
