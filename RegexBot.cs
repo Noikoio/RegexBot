@@ -45,6 +45,7 @@ namespace Noikoio.RegexBot
             // Initialize modules
             _modules = new BotModule[]
             {
+                new Module.DMLogger.DMLogger(_client),
                 new Module.AutoMod.AutoMod(_client),
                 new Module.ModTools.ModTools(_client),
                 new Module.AutoRespond.AutoRespond(_client),
