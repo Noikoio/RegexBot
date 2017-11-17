@@ -11,6 +11,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
     {
         readonly int _logId;
         readonly DateTime _ts;
+        readonly ulong _guildId;
         readonly ulong? _invokeId;
         readonly ulong _targetId;
         readonly ulong? _channelId;
@@ -26,14 +27,18 @@ namespace Noikoio.RegexBot.Module.ModLogs
         /// </summary>
         public DateTime Timestamp => _ts;
         /// <summary>
-        /// Gets the ID of the invoking user.
-        /// This value exists only if this entry was created through action of another user that is not the target.
+        /// Gets the ID of the guild to which this log entry corresponds.
         /// </summary>
-        public ulong? Invoker => _invokeId;
+        public ulong Guild => _guildId;
         /// <summary>
         /// Gets the ID of the user to which this log entry corresponds.
         /// </summary>
         public ulong Target => _targetId;
+        /// <summary>
+        /// Gets the ID of the invoking user.
+        /// This value exists only if this entry was created through action of another user that is not the target.
+        /// </summary>
+        public ulong? Invoker => _invokeId;
         /// <summary>
         /// Gets the guild channel ID to which this log entry corresponds, if any.
         /// </summary>
