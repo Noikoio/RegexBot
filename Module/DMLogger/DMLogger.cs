@@ -23,6 +23,7 @@ namespace Noikoio.RegexBot.Module.DMLogger
         private async Task Client_MessageReceived(SocketMessage arg)
         {
             if (!(arg.Channel is IDMChannel)) return;
+            if (arg.Author.IsBot) return;
 
             await ProcessMessage(arg, false);
         }
@@ -30,6 +31,7 @@ namespace Noikoio.RegexBot.Module.DMLogger
         private async Task Client_MessageUpdated(Cacheable<IMessage, ulong> arg1, SocketMessage arg2, ISocketMessageChannel arg3)
         {
             if (!(arg2.Channel is IDMChannel)) return;
+            if (arg2.Author.IsBot) return;
 
             await ProcessMessage(arg2, true);
         }
