@@ -77,6 +77,7 @@ namespace Noikoio.RegexBot.Module.EntityCache
         public override string ToString() => DisplayName;
 
         #region Queries
+        // Double-check constructor if making changes to this constant
         const string QueryColumns = "user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url";
 
         /// <summary>
