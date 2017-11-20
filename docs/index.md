@@ -19,7 +19,7 @@ You will need to get a bot token. To do so, [create an app in Discord](https://d
 Once you have created your Discord app, go to the following URL after inserting your client ID where specified: `https://discordapp.com/oauth2/authorize?client_id=CLIENT_ID&scope=bot`.
 
 ### Configure
-When starting or reloading, RegexBot looks for a file in its current directory named `settings.json`. The configuration file is too complex to explain simply here. [Check the documentation](./docs) to find a sample configuration file, as well as more detailed information.
+When starting or reloading, RegexBot looks for a file in its current directory named `settings.json`. The configuration file is too complex to explain simply here. [Check the documentation](docs.html) to find a sample configuration file, as well as more detailed information.
 
 # Compiling from source
 ### Prerequisites
