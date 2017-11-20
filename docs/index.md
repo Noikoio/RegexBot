@@ -32,7 +32,7 @@ With the prerequisites installed, run the following commands:
 ```
 $ git clone {{ site.github.clone_url }}
 $ cd RegexBot
-$ dotnet public -c Release -o output
+$ dotnet publish -c Release -o output
 ```
 You may see some warnings during this last step, but the build should still succeed. These warnings will be corrected in future releases.
 
