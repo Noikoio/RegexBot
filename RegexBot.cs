@@ -20,6 +20,13 @@ namespace Noikoio.RegexBot
         
         internal RegexBot()
         {
+            // Welcome message
+            string name = nameof(RegexBot);
+            string sv = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
+            Logger.GetLogger(name)
+                .Invoke($"{name} v{sv} - https://github.com/Noikoio/RegexBot")
+                .Wait();
+
             // Load configuration
             _config = new Configuration(this);
             if (!_config.LoadInitialConfig())
