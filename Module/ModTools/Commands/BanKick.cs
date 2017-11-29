@@ -18,12 +18,16 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
         private readonly bool _forceReason;
         private readonly int _purgeDays;
         private readonly string _successMsg;
+        private readonly string _notifyMsg;
 
         // Configuration:
         // "forcereason" - boolean; Force a reason to be given. Defaults to false.
         // "purgedays" - integer; Number of days of target's post history to delete, if banning.
         //               Must be between 0-7 inclusive. Defaults to 0.
         // "successmsg" - Message to display on command success. Overrides default.
+        // "notifymsg" - Message to send to the target user being acted upon. Default message is used
+        //               if the value is not specified. If a blank value is given, the feature is disabled.
+        //               Takes the special values $s for server name and $r for reason text.
         protected BanKick(ModTools l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
         {
             _mode = mode;
@@ -34,6 +38,18 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 throw new RuleImportException("The value of 'purgedays' must be between 0 and 7.");
             }
             _successMsg = conf["successmsg"]?.Value<string>();
+            if (conf["notifymsg"] == null)
+            {
+                // Message not specified - use default
+                string act = _mode == CommandMode.Ban ? "banned" : "kicked";
+                _notifyMsg = $"You have been {act} from $s for the following reason:\n$r";
+            }
+            else
+            {
+                string val = conf["notifymsg"].Value<string>();
+                if (string.IsNullOrWhiteSpace(val)) _notifyMsg = null; // empty value - disable message
+                else _notifyMsg = val;
+            }
         }
 
         // Usage: (command) (mention) (reason)
@@ -41,7 +57,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
         {
             string[] line = msg.Content.Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
             string targetstr;
-            string reason = $"Invoked by {msg.Author.ToString()}.";
+            string reason;
             if (line.Length < 2)
             {
                 await SendUsageMessage(msg, null);
@@ -51,8 +67,8 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 
             if (line.Length == 3)
             {
-                // Reason exists
-                reason += " Reason: " + line[2];
+                // Reason given - keep it
+                reason = line[2];
             }
             else
             {
@@ -62,6 +78,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                     await SendUsageMessage(msg, ":x: **You must specify a reason.**");
                     return;
                 }
+                reason = null;
             }
 
             // Getting SocketGuildUser target
@@ -89,13 +106,40 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 return;
             }
 
+            // Send out message
+            bool notifyfail = false;
+            if (_notifyMsg != null && targetobj != null)
+            {
+                var ch = targetobj.GetOrCreateDMChannelAsync();
+                string outresult = _notifyMsg;
+                outresult = outresult.Replace("$s", g.Name);
+                outresult = outresult.Replace("$r", reason ?? "No reason specified.");
+                try
+                {
+                    await (await ch).SendMessageAsync(outresult);
+                }
+                catch (Discord.Net.HttpException ex)
+                {
+                    await Log("Failed to send out notification to target over DM: "
+                        + Enum.GetName(typeof(System.Net.HttpStatusCode), ex.HttpCode));
+                    notifyfail = true;
+                }
+            }
+
+            // Do the action
             try
             {
-                if (reason != null) reason = Uri.EscapeDataString(reason);
+                string reasonlog = $"Invoked by {msg.Author.ToString()}.";
+                if (reason != null) reasonlog += $" Reason: {reason}";
+                reasonlog = Uri.EscapeDataString(reasonlog);
 #warning Remove EscapeDataString call on next Discord.Net update
-                if (_mode == CommandMode.Ban) await g.AddBanAsync(targetuid, _purgeDays, reason);
+                if (_mode == CommandMode.Ban) await g.AddBanAsync(targetuid, _purgeDays, reasonlog);
                 else await targetobj.KickAsync(reason);
                 string resultmsg = BuildSuccessMessage(targetdisp);
+                if (notifyfail)
+                {
+                    resultmsg += $"\n(Failed to send " + (_mode == CommandMode.Ban ? "ban" : "kick") + " notification to user.)";
+                }
                 await msg.Channel.SendMessageAsync(resultmsg);
             }
             catch (Discord.Net.HttpException ex)
