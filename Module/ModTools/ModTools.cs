@@ -1,20 +1,19 @@
-﻿using Discord.WebSocket;
+﻿using Discord;
+using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModTools
 {
     /// <summary>
-    /// ModTools module object.
-    /// Implements moderation commands that are individually defined and enabled in configuration.
+    /// ModTools module.
+    /// This class manages reading configuration and creating instances based on it.
     /// </summary>
-    // We are not using Discord.Net's Commands extension, as it does not allow for changes during runtime.
     class ModTools : BotModule
     {
         public override string Name => "ModTools";
@@ -26,47 +25,14 @@ namespace Noikoio.RegexBot.Module.ModTools
 
         private async Task Client_MessageReceived(SocketMessage arg)
         {
-            // Disregard if not in a guild
-            SocketGuild g = (arg.Author as SocketGuildUser)?.Guild;
-            if (g == null) return;
-
-            // Get guild config
-            ServerConfig sc = RegexBot.Config.Servers.FirstOrDefault(s => s.Id == g.Id);
-            if (sc == null) return;
-
-            // Disregard if not a bot moderator
-            if (!sc.Moderators.ExistsInList(arg)) return;
-
-            // Disregard if the message contains a newline character
-            if (arg.Content.Contains("\n")) return;
-
-            // Check for and invoke command...
-            string cmdchk;
-            int spc = arg.Content.IndexOf(' ');
-            if (spc != -1) cmdchk = arg.Content.Substring(0, spc);
-            else cmdchk = arg.Content;
-            if (((IDictionary<string, CommandBase>)GetConfig(g.Id)).TryGetValue(cmdchk, out var c))
-            {
-                // ...on the thread pool.
-                await Task.Run(async () =>
-                {
-                    try
-                    {
-                        await Log($"'{c.Label}' invoked by {arg.Author.ToString()} in {g.Name}/#{arg.Channel.Name}");
-                        await c.Invoke(g, arg);
-                    }
-                    catch (Exception ex)
-                    {
-                        await Log($"Encountered an error for the command '{c.Label}'. Details follow:");
-                        await Log(ex.ToString());
-                    }
-                });
-            }
+            await CommandCheckInvoke(arg);
         }
 
         [ConfigSection("modtools")]
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
+            // TODO: put command definitions elsewhere, not in root of this config
+
             var commands = new Dictionary<string, CommandBase>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var def in configSection.Children<JProperty>())
@@ -85,5 +51,41 @@ namespace Noikoio.RegexBot.Module.ModTools
         }
 
         public new Task Log(string text) => base.Log(text);
+
+        private async Task CommandCheckInvoke(SocketMessage arg)
+        {
+            // Disregard if not in a guild
+            SocketGuild g = (arg.Author as SocketGuildUser)?.Guild;
+            if (g == null) return;
+
+            // Get guild config
+            ServerConfig sc = RegexBot.Config.Servers.FirstOrDefault(s => s.Id == g.Id);
+            if (sc == null) return;
+
+            // Disregard if not a bot moderator
+            if (!sc.Moderators.ExistsInList(arg)) return;
+
+            // Disregard if the message contains a newline character
+            if (arg.Content.Contains("\n")) return;
+
+            // Check for and invoke command
+            string cmdchk;
+            int spc = arg.Content.IndexOf(' ');
+            if (spc != -1) cmdchk = arg.Content.Substring(0, spc);
+            else cmdchk = arg.Content;
+            if (((IDictionary<string, CommandBase>)GetConfig(g.Id)).TryGetValue(cmdchk, out var c))
+            {
+                try
+                {
+                    await Log($"'{c.Label}' invoked by {arg.Author.ToString()} in {g.Name}/#{arg.Channel.Name}");
+                    await c.Invoke(g, arg);
+                }
+                catch (Exception ex)
+                {
+                    await Log($"Encountered an error for the command '{c.Label}'. Details follow:");
+                    await Log(ex.ToString());
+                }
+            }
+        }
     }
 }

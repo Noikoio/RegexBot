@@ -11,6 +11,10 @@ using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModTools
 {
+    /// <summary>
+    /// Base class for ModTools command.
+    /// We are not using Discord.Net's Commands extension, as it does not allow for changes during runtime.
+    /// </summary>
     [DebuggerDisplay("{Label}-type command")]
     abstract class CommandBase
     {
