@@ -125,6 +125,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                     notifyfail = true;
                 }
             }
+            else notifyfail = true;
 
             // Do the action
             try
@@ -138,7 +139,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 string resultmsg = BuildSuccessMessage(targetdisp);
                 if (notifyfail)
                 {
-                    resultmsg += $"\n(Failed to send " + (_mode == CommandMode.Ban ? "ban" : "kick") + " notification to user.)";
+                    resultmsg += $"\n(could not send " + (_mode == CommandMode.Ban ? "ban" : "kick") + " notification to user.)";
                 }
                 await msg.Channel.SendMessageAsync(resultmsg);
             }
