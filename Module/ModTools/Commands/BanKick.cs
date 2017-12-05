@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModTools.Commands
 {
-    
     class BanKick : CommandBase
     {
         // Ban and kick commands are highly similar in implementation, and thus are handled in a single class.
@@ -19,6 +18,11 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
         private readonly int _purgeDays;
         private readonly string _successMsg;
         private readonly string _notifyMsg;
+
+        const string DefaultMsg = "You have been {0} from $s for the following reason:\n$r";
+        const string DefaultMsgBanAppend = "\n\nIf the moderators have allowed it, you may petition your ban by" +
+            " submitting **one** message to the moderation team. To do so, reply to this message with" +
+            " `!petition [Your message here]`.";
 
         // Configuration:
         // "forcereason" - boolean; Force a reason to be given. Defaults to false.
@@ -41,8 +45,8 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             if (conf["notifymsg"] == null)
             {
                 // Message not specified - use default
-                string act = _mode == CommandMode.Ban ? "banned" : "kicked";
-                _notifyMsg = $"You have been {act} from $s for the following reason:\n$r";
+                _notifyMsg = string.Format(DefaultMsg, mode == CommandMode.Ban ? "banned" : "kicked");
+                if (_mode == CommandMode.Ban) _notifyMsg += DefaultMsgBanAppend;
             }
             else
             {
