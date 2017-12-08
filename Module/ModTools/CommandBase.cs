@@ -21,7 +21,8 @@ namespace Noikoio.RegexBot.Module.ModTools
         private readonly ModTools _modtools;
         private readonly string _label;
         private readonly string _command;
-        
+
+        protected ModTools Mt => _modtools;
         public string Label => _label;
         public string Command => _command;
 

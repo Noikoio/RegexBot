@@ -37,30 +37,48 @@ namespace Noikoio.RegexBot.Module.ModTools
             {
                 throw new RuleImportException("Configuration for this section is invalid.");
             }
-            
-            // BIG TO DO LIST:
-            /*
-             * 1. Have commands go into their own space within modtools. Candidate name: "banappeal"
-             * 2. Add a property for where to put the petition channel
-             * 3. Within ban cmd load, have it check for the existence of a petition channel... if possible?
-             *      I guess otherwise silently discard, if the info isn't readily available. I don't know.
-             */
+            var config = (JObject)configSection;
 
-            var commands = new Dictionary<string, CommandBase>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var def in configSection.Children<JProperty>())
+            // Ban petition reporting channel
+            EntityName? petitionrpt;
+            var petitionstr = config["PetitionRelay"]?.Value<string>();
+            if (string.IsNullOrEmpty(petitionstr)) petitionrpt = null;
+            else if (petitionstr.Length > 1 && petitionstr[0] != '#')
             {
-                string label = def.Name;
-                var cmd = CommandBase.CreateInstance(this, def);
-                if (commands.ContainsKey(cmd.Command))
-                    throw new RuleImportException(
-                        $"{label}: 'command' value must not be equal to that of another definition. " +
-                        $"Given value is being used for {commands[cmd.Command].Label}.");
-
-                commands.Add(cmd.Command, cmd);
+                // Not a channel.
+                throw new RuleImportException("PetitionRelay value must be set to a channel.");
             }
-            await Log($"Loaded {commands.Count} command definition(s).");
-            return new ReadOnlyDictionary<string, CommandBase>(commands);
+            else
+            {
+                petitionrpt = new EntityName(petitionstr.Substring(1), EntityType.Channel);
+            }
+
+            // And then the commands
+            var commands = new Dictionary<string, CommandBase>(StringComparer.OrdinalIgnoreCase);
+            var commandconf = config["Commands"];
+            if (commandconf != null)
+            {
+                if (commandconf.Type != JTokenType.Object)
+                {
+                    throw new RuleImportException("CommandDefs is not properly defined.");
+                }
+
+                foreach (var def in commandconf.Children<JProperty>())
+                {
+                    string label = def.Name;
+                    var cmd = CommandBase.CreateInstance(this, def);
+                    if (commands.ContainsKey(cmd.Command))
+                        throw new RuleImportException(
+                            $"{label}: 'command' value must not be equal to that of another definition. " +
+                            $"Given value is being used for {commands[cmd.Command].Label}.");
+
+                    commands.Add(cmd.Command, cmd);
+                }
+                await Log($"Loaded {commands.Count} command definition(s).");
+            }
+            
+            return new Tuple<ReadOnlyDictionary<string, CommandBase>, EntityName?>(
+                new ReadOnlyDictionary<string, CommandBase>(commands), petitionrpt);
         }
 
         /*
@@ -70,10 +88,10 @@ namespace Noikoio.RegexBot.Module.ModTools
          * Item 2: Ban petition channel (EntityName)
          */
 
-        private new Tuple<Dictionary<string, CommandBase>, EntityName> GetConfig(ulong guildId)
-            => (Tuple<Dictionary<string, CommandBase>, EntityName>)base.GetConfig(guildId);
-        private Dictionary<string, CommandBase> GetCommandConfig(ulong guild) => GetConfig(guild).Item1;
-        private EntityName GetPetitionConfig(ulong guild) => GetConfig(guild).Item2;
+        private new Tuple<ReadOnlyDictionary<string, CommandBase>, EntityName?> GetConfig(ulong guildId)
+            => (Tuple<ReadOnlyDictionary<string, CommandBase>, EntityName?>)base.GetConfig(guildId);
+        private ReadOnlyDictionary<string, CommandBase> GetCommandConfig(ulong guild) => GetConfig(guild).Item1;
+        private EntityName? GetPetitionConfig(ulong guild) => GetConfig(guild).Item2;
         #endregion
 
         public new Task Log(string text) => base.Log(text);
@@ -116,9 +134,11 @@ namespace Noikoio.RegexBot.Module.ModTools
         /// List of available appeals. Key is user (for quick lookup). Value is guild (for quick config resolution).
         /// TODO expiration?
         /// </summary>
-        private Dictionary<ulong, ulong> _openPetitions; // Key: user, Value: guild
+        private Dictionary<ulong, ulong> _openPetitions = new Dictionary<ulong, ulong>();
         public void AddPetition(ulong guild, ulong user)
         {
+            // Do nothing if disabled
+            if (GetPetitionConfig(guild) == null) return;
             lock (_openPetitions) _openPetitions[user] = guild;
         }
         private async Task PetitionRelayCheck(SocketMessage msg)
@@ -163,7 +183,9 @@ namespace Noikoio.RegexBot.Module.ModTools
             }
 
             // Get petition reporting target if not already known
-            var rch = GetPetitionConfig(targetGuild);
+            var pcv = GetPetitionConfig(targetGuild);
+            if (!pcv.HasValue) return; // No target. How'd we get here, anyway?
+            var rch = pcv.Value;
             ISocketMessageChannel rchObj;
             if (!rch.Id.HasValue)
             {
@@ -197,7 +219,12 @@ namespace Noikoio.RegexBot.Module.ModTools
                         IconUrl = msg.Author.GetAvatarUrl()
                     },
                     Description = ptext,
-                    Timestamp = msg.Timestamp
+                    Timestamp = msg.Timestamp,
+
+                    Footer = new EmbedFooterBuilder()
+                    {
+                        Text = "User ID: " + msg.Author.Id
+                    }
                 });
             }
             catch (Discord.Net.HttpException ex)
