@@ -16,6 +16,17 @@ namespace Noikoio.RegexBot.Module.EntityCache
     /// </summary>
     class EntityCache : BotModule
     {
+        /*
+         * Future plans:
+         * Have this, or something connected to this class, be accessible throughout the bot.
+         * 
+         * There should be a system that holds a small in-memory cache of users (as EntityCache objects)
+         * for quick lookups by other parts of the bot.
+         * Without this system, we'll be having future bot features constantly querying the database
+         * on their own to look up entity cache records, which (among other things) could result in
+         * a race conditions where an event becomes aware of a user before it has been recorded.
+         */
+
         private readonly DatabaseConfig _db;
 
         public override string Name => nameof(EntityCache);
