@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModTools
@@ -26,6 +25,9 @@ namespace Noikoio.RegexBot.Module.ModTools
 
         private async Task Client_MessageReceived(SocketMessage arg)
         {
+            // Ignore bots
+            if (arg.Author.IsBot) return;
+
             // Disregard if not in a guild
             SocketGuild g = (arg.Author as SocketGuildUser)?.Guild;
             if (g == null) return;
