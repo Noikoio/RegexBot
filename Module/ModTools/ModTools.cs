@@ -4,7 +4,6 @@ using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -28,71 +27,23 @@ namespace Noikoio.RegexBot.Module.ModTools
             if (arg.Channel is IDMChannel) await PetitionRelayCheck(arg);
             else if (arg.Channel is IGuildChannel) await CommandCheckInvoke(arg);
         }
-
-        #region Config
+        
         [ConfigSection("modtools")]
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
-            if (configSection.Type != JTokenType.Object)
-            {
-                throw new RuleImportException("Configuration for this section is invalid.");
-            }
-            var config = (JObject)configSection;
+            // Constructor throws exception on config errors
+            var conf = new ConfigItem(this, configSection);
 
-            // Ban petition reporting channel
-            EntityName? petitionrpt;
-            var petitionstr = config["PetitionRelay"]?.Value<string>();
-            if (string.IsNullOrEmpty(petitionstr)) petitionrpt = null;
-            else if (petitionstr.Length > 1 && petitionstr[0] != '#')
-            {
-                // Not a channel.
-                throw new RuleImportException("PetitionRelay value must be set to a channel.");
-            }
-            else
-            {
-                petitionrpt = new EntityName(petitionstr.Substring(1), EntityType.Channel);
-            }
+            // Log results
+            if (conf.Commands.Count > 0)
+                await Log(conf.Commands.Count + " command definition(s) loaded.");
+            if (conf.PetitionReportingChannel.HasValue)
+                await Log("Ban petitioning has been enabled.");
 
-            // And then the commands
-            var commands = new Dictionary<string, CommandBase>(StringComparer.OrdinalIgnoreCase);
-            var commandconf = config["Commands"];
-            if (commandconf != null)
-            {
-                if (commandconf.Type != JTokenType.Object)
-                {
-                    throw new RuleImportException("CommandDefs is not properly defined.");
-                }
-
-                foreach (var def in commandconf.Children<JProperty>())
-                {
-                    string label = def.Name;
-                    var cmd = CommandBase.CreateInstance(this, def);
-                    if (commands.ContainsKey(cmd.Command))
-                        throw new RuleImportException(
-                            $"{label}: 'command' value must not be equal to that of another definition. " +
-                            $"Given value is being used for {commands[cmd.Command].Label}.");
-
-                    commands.Add(cmd.Command, cmd);
-                }
-                await Log($"Loaded {commands.Count} command definition(s).");
-            }
-            
-            return new Tuple<ReadOnlyDictionary<string, CommandBase>, EntityName?>(
-                new ReadOnlyDictionary<string, CommandBase>(commands), petitionrpt);
+            return conf;
         }
 
-        /*
-         * Config is stored in a tuple. I admit, not the best choice...
-         * Consider a different approach if more data needs to be stored in the future.
-         * Item 1: Command config (Dictionary<string, CommandBase>)
-         * Item 2: Ban petition channel (EntityName)
-         */
-
-        private new Tuple<ReadOnlyDictionary<string, CommandBase>, EntityName?> GetConfig(ulong guildId)
-            => (Tuple<ReadOnlyDictionary<string, CommandBase>, EntityName?>)base.GetConfig(guildId);
-        private ReadOnlyDictionary<string, CommandBase> GetCommandConfig(ulong guild) => GetConfig(guild).Item1;
-        private EntityName? GetPetitionConfig(ulong guild) => GetConfig(guild).Item2;
-        #endregion
+        private new ConfigItem GetConfig(ulong guildId) => (ConfigItem)base.GetConfig(guildId);
 
         public new Task Log(string text) => base.Log(text);
 
@@ -115,7 +66,7 @@ namespace Noikoio.RegexBot.Module.ModTools
             int spc = arg.Content.IndexOf(' ');
             if (spc != -1) cmdchk = arg.Content.Substring(0, spc);
             else cmdchk = arg.Content;
-            if ((GetCommandConfig(g.Id)).TryGetValue(cmdchk, out var c))
+            if (GetConfig(g.Id).Commands.TryGetValue(cmdchk, out var c))
             {
                 try
                 {
@@ -130,6 +81,7 @@ namespace Noikoio.RegexBot.Module.ModTools
             }
         }
 
+        #region Ban petitions
         /// <summary>
         /// List of available appeals. Key is user (for quick lookup). Value is guild (for quick config resolution).
         /// TODO expiration?
@@ -138,13 +90,17 @@ namespace Noikoio.RegexBot.Module.ModTools
         public void AddPetition(ulong guild, ulong user)
         {
             // Do nothing if disabled
-            if (GetPetitionConfig(guild) == null) return;
+            if (!GetConfig(guild).PetitionReportingChannel.HasValue) return;
             lock (_openPetitions) _openPetitions[user] = guild;
         }
         private async Task PetitionRelayCheck(SocketMessage msg)
         {
             const string PetitionAccepted = "Your petition has been forwarded to the moderators for review.";
             const string PetitionDenied = "You may not submit a ban petition.";
+
+            // It's possible the sender may still block messages sent to them,
+            // hence the empty catch blocks you'll see up ahead.
+
             if (!msg.Content.StartsWith("!petition ", StringComparison.InvariantCultureIgnoreCase)) return;
 
             // Input validation
@@ -152,6 +108,13 @@ namespace Noikoio.RegexBot.Module.ModTools
             if (string.IsNullOrWhiteSpace(ptext))
             {
                 // Just ignore.
+                return;
+            }
+            if (ptext.Length > 1000)
+            {
+                // Enforce petition length limit.
+                try { await msg.Author.SendMessageAsync("Your petition message is too long. Try again with a shorter message."); }
+                catch (Discord.Net.HttpException) { }
                 return;
             }
 
@@ -163,12 +126,10 @@ namespace Noikoio.RegexBot.Module.ModTools
                     _openPetitions.Remove(msg.Author.Id);
                 }
             }
-
-            // It's possible the sender may still block messages sent to them,
-            // hence the empty catch blocks you'll see up ahead.
-
+            
             if (targetGuild == 0)
             {
+                // Not in the list. Nothing to do.
                 try { await msg.Author.SendMessageAsync(PetitionDenied); }
                 catch (Discord.Net.HttpException) { }
                 return;
@@ -182,9 +143,9 @@ namespace Noikoio.RegexBot.Module.ModTools
                 return;
             }
 
-            // Get petition reporting target if not already known
-            var pcv = GetPetitionConfig(targetGuild);
-            if (!pcv.HasValue) return; // No target. How'd we get here, anyway?
+            // Get petition reporting target
+            var pcv = GetConfig(targetGuild).PetitionReportingChannel;
+            if (!pcv.HasValue) return; // No target. This should be logically impossible, but... just in case.
             var rch = pcv.Value;
             ISocketMessageChannel rchObj;
             if (!rch.Id.HasValue)
@@ -192,11 +153,17 @@ namespace Noikoio.RegexBot.Module.ModTools
                 rchObj = gObj.TextChannels
                     .Where(c => c.Name.Equals(rch.Name, StringComparison.InvariantCultureIgnoreCase))
                     .FirstOrDefault();
+                // Update value if found
+                if (rchObj != null)
+                {
+                    GetConfig(targetGuild).UpdatePetitionChannel(rchObj.Id);
+                }
             }
             else
             {
-                rchObj = (ISocketMessageChannel)gObj.GetChannel(rch.Id.Value);
+                rchObj = gObj.GetChannel(rch.Id.Value) as ISocketMessageChannel;
             }
+
             if (rchObj == null)
             {
                 // Channel not found.
@@ -206,7 +173,7 @@ namespace Noikoio.RegexBot.Module.ModTools
                 return;
             }
 
-            // Ready to relay as embed
+            // Ready to relay
             try
             {
                 await rchObj.SendMessageAsync("", embed: new EmbedBuilder()
@@ -240,5 +207,6 @@ namespace Noikoio.RegexBot.Module.ModTools
             try { await msg.Author.SendMessageAsync(PetitionAccepted); }
             catch (Discord.Net.HttpException) { }
         }
+        #endregion
     }
 }
