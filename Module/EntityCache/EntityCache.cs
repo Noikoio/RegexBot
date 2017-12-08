@@ -31,18 +31,19 @@ namespace Noikoio.RegexBot.Module.EntityCache
                 client.GuildAvailable += Client_GuildAvailable;
                 client.GuildUpdated += Client_GuildUpdated;
                 client.GuildMemberUpdated += Client_GuildMemberUpdated;
-                // it may not be necessary to handle JoinedGuild, as GuildAvailable provides this info
+                client.UserJoined += Client_UserJoined;
             }
             else
             {
                 Log("No database storage available.").Wait();
             }
         }
-
+        
         public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
 
         #region Event handling
-        // Guild _and_ guild member information has become available
+        // Guild and guild member information has become available.
+        // This is a very expensive operation, when joining larger guilds for the first time.
         private async Task Client_GuildAvailable(SocketGuild arg)
         {
             await Task.Run(async () =>
@@ -64,12 +65,14 @@ namespace Noikoio.RegexBot.Module.EntityCache
         {
             await Task.Run(() => UpdateGuildMember(arg2));
         }
-#endregion
 
-#region Table setup
-        
-#endregion
-        
+        // A new guild member has appeared
+        private async Task Client_UserJoined(SocketGuildUser arg)
+        {
+            await UpdateGuildMember(arg);
+        }
+        #endregion
+
         private async Task UpdateGuild(SocketGuild g)
         {
             try
