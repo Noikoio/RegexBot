@@ -131,6 +131,9 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             }
             else notifyfail = true;
 
+            // Give target user ability to petition
+            Mt.AddPetition(g.Id, targetuid);
+
             // Do the action
             try
             {
@@ -138,8 +141,12 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 if (reason != null) reasonlog += $" Reason: {reason}";
                 reasonlog = Uri.EscapeDataString(reasonlog);
 #warning Remove EscapeDataString call on next Discord.Net update
+#if !DEBUG
                 if (_mode == CommandMode.Ban) await g.AddBanAsync(targetuid, _purgeDays, reasonlog);
                 else await targetobj.KickAsync(reason);
+#else
+#warning "Actual kick/ban action is DISABLED during debug."
+#endif
                 string resultmsg = BuildSuccessMessage(targetdisp);
                 if (notifyfail)
                 {
