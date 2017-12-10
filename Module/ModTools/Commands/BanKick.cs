@@ -132,7 +132,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             else notifyfail = true;
 
             // Give target user ability to petition
-            Mt.AddPetition(g.Id, targetuid);
+            if (_mode == CommandMode.Ban) Mt.AddPetition(g.Id, targetuid);
 
             // Do the action
             try
