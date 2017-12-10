@@ -31,7 +31,7 @@ namespace Noikoio.RegexBot.Module.ModTools
             else if (arg.Channel is IGuildChannel) await CommandCheckInvoke(arg);
         }
         
-        [ConfigSection("modtools")]
+        [ConfigSection("ModTools")]
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
             // Constructor throws exception on config errors
