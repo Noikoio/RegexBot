@@ -11,10 +11,8 @@ namespace Noikoio.RegexBot.Module.ModTools
     /// </summary>
     class ConfigItem
     {
-        private EntityName? _petitionReportCh;
         private readonly ReadOnlyDictionary<string, CommandBase> _cmdInstances;
-
-        public EntityName? PetitionReportingChannel => _petitionReportCh;
+        
         public ReadOnlyDictionary<string, CommandBase> Commands => _cmdInstances;
 
         public ConfigItem(ModTools instance, JToken inconf)
@@ -24,19 +22,7 @@ namespace Noikoio.RegexBot.Module.ModTools
                 throw new RuleImportException("Configuration for this section is invalid.");
             }
             var config = (JObject)inconf;
-
-            // Ban petition reporting channel
-            var petitionstr = config["PetitionRelay"]?.Value<string>();
-            if (string.IsNullOrEmpty(petitionstr)) _petitionReportCh = null;
-            else if (petitionstr.Length > 1 && petitionstr[0] != '#')
-            {
-                // Not a channel.
-                throw new RuleImportException("PetitionRelay value must be set to a channel.");
-            }
-            else
-            {
-                _petitionReportCh = new EntityName(petitionstr.Substring(1), EntityType.Channel);
-            }
+            
 
             // Command instances
             var commands = new Dictionary<string, CommandBase>(StringComparer.OrdinalIgnoreCase);
@@ -61,15 +47,6 @@ namespace Noikoio.RegexBot.Module.ModTools
                 }
             }
             _cmdInstances = new ReadOnlyDictionary<string, CommandBase>(commands);
-        }
-
-        public void UpdatePetitionChannel(ulong id)
-        {
-            if (!PetitionReportingChannel.HasValue) return;
-            if (PetitionReportingChannel.Value.Id.HasValue) return; // nothing to update
-
-            // For lack of a better option - create a new EntityName with ID already provided
-            _petitionReportCh = new EntityName($"{id}::{PetitionReportingChannel.Value.Name}", EntityType.Channel);
         }
     }
 }

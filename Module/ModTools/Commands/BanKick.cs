@@ -20,9 +20,6 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
         private readonly string _notifyMsg;
 
         const string DefaultMsg = "You have been {0} from $s for the following reason:\n$r";
-        const string DefaultMsgBanAppend = "\n\nIf the moderators have allowed it, you may petition your ban by" +
-            " submitting **one** message to the moderation team. To do so, reply to this message with" +
-            " `!petition [Your message here]`.";
 
         // Configuration:
         // "forcereason" - boolean; Force a reason to be given. Defaults to false.
@@ -46,7 +43,6 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             {
                 // Message not specified - use default
                 _notifyMsg = string.Format(DefaultMsg, mode == CommandMode.Ban ? "banned" : "kicked");
-                if (_mode == CommandMode.Ban) _notifyMsg += DefaultMsgBanAppend;
             }
             else
             {
@@ -130,9 +126,6 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 }
             }
             else notifyfail = true;
-
-            // Give target user ability to petition
-            if (_mode == CommandMode.Ban) Mt.AddPetition(g.Id, targetuid);
 
             // Do the action
             try
