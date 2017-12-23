@@ -48,7 +48,7 @@ namespace Noikoio.RegexBot
                 new Module.AutoMod.AutoMod(_client),
                 new Module.ModTools.ModTools(_client),
                 new Module.AutoRespond.AutoRespond(_client),
-                new Module.EntityCache.EntityCache(_client) // EntityCache goes before anything else that uses its data
+                new EntityCache.Module(_client) // EntityCache goes before anything else that uses its data
             };
             var dlog = Logger.GetLogger("Discord.Net");
             _client.Log += async (arg) =>

@@ -7,37 +7,26 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.EntityCache
+namespace Noikoio.RegexBot.EntityCache
 {
     /// <summary>
-    /// Caches information regarding all known guilds, channels, and users.
+    /// Bot module portion of the entity cache. Caches information regarding all known guilds, channels, and users.
     /// The function of this module should be transparent to the user, and thus no configuration is needed.
     /// This module should be initialized BEFORE any other modules that make use of guild and user cache.
     /// </summary>
-    class EntityCache : BotModule
+    class Module : BotModule
     {
-        /*
-         * Future plans:
-         * Have this, or something connected to this class, be accessible throughout the bot.
-         * 
-         * There should be a system that holds a small in-memory cache of users (as EntityCache objects)
-         * for quick lookups by other parts of the bot.
-         * Without this system, we'll be having future bot features constantly querying the database
-         * on their own to look up entity cache records, which (among other things) could result in
-         * a race conditions where an event becomes aware of a user before it has been recorded.
-         */
-
         private readonly DatabaseConfig _db;
 
         public override string Name => nameof(EntityCache);
-        
-        public EntityCache(DiscordSocketClient client) : base(client)
+
+        public Module(DiscordSocketClient client) : base(client)
         {
             _db = RegexBot.Config.Database;
 
             if (_db.Available)
             {
-                Sql.CreateCacheTables();
+                SqlHelper.CreateCacheTables();
 
                 client.GuildAvailable += Client_GuildAvailable;
                 client.GuildUpdated += Client_GuildUpdated;
@@ -49,12 +38,12 @@ namespace Noikoio.RegexBot.Module.EntityCache
                 Log("No database storage available.").Wait();
             }
         }
-        
+
         public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
 
         #region Event handling
         // Guild and guild member information has become available.
-        // This is a very expensive operation, when joining larger guilds for the first time.
+        // This is a very expensive operation, especially when joining larger guilds.
         private async Task Client_GuildAvailable(SocketGuild arg)
         {
             await Task.Run(async () =>
@@ -124,7 +113,7 @@ namespace Noikoio.RegexBot.Module.EntityCache
                             + "cache_date = EXCLUDED.cache_date, username = EXCLUDED.username, "
                             + "discriminator = EXCLUDED.discriminator, " // I've seen someone's discriminator change this one time...
                             + "nickname = EXCLUDED.nickname, avatar_url = EXCLUDED.avatar_url";
-                        
+
                         var uid = c.Parameters.Add("@Uid", NpgsqlDbType.Bigint);
                         var gid = c.Parameters.Add("@Gid", NpgsqlDbType.Bigint);
                         c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = DateTime.Now;
