@@ -20,7 +20,7 @@ namespace Noikoio.RegexBot
         
         internal RegexBot()
         {
-            // Load configuration
+            // Load initial configuration
             _config = new Configuration(this);
             if (!_config.LoadInitialConfig())
             {
@@ -31,6 +31,7 @@ namespace Noikoio.RegexBot
                 Environment.Exit(1);
             }
 
+            // Set Discord client settings
             _client = new DiscordSocketClient(new DiscordSocketConfig()
             {
                 LogLevel = LogSeverity.Info,
@@ -39,8 +40,9 @@ namespace Noikoio.RegexBot
                 MessageCacheSize = 0
             });
 
-            // Hook up handlers for basic functions
+            // Hook up basic handlers and other references
             _client.Connected += _client_Connected;
+            EntityCache.EntityCache.SetClient(_client);
 
             // Initialize modules
             _modules = new BotModule[]
@@ -50,13 +52,15 @@ namespace Noikoio.RegexBot
                 new Module.AutoRespond.AutoRespond(_client),
                 new EntityCache.Module(_client) // EntityCache goes before anything else that uses its data
             };
+
+            // Set up logging
             var dlog = Logger.GetLogger("Discord.Net");
             _client.Log += async (arg) =>
                 await dlog(
                     String.Format("{0}: {1}{2}", arg.Source, ((int)arg.Severity < 3 ? arg.Severity + ": " : ""),
                     arg.Message));
 
-            // With modules initialized, finish loading configuration
+            // Finish loading configuration
             var conf = _config.ReloadServerConfig().Result;
             if (conf == false)
             {

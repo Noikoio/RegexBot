@@ -1,5 +1,4 @@
 ﻿using Discord.WebSocket;
-using Npgsql;
 using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
@@ -17,15 +16,10 @@ namespace Noikoio.RegexBot.EntityCache
         public const string TableTextChannel = "cache_textchannel";
         public const string TableUser = "cache_users";
 
-        private static async Task<NpgsqlConnection> OpenDB()
-        {
-            if (!RegexBot.Config.Database.Available) return null;
-            return await RegexBot.Config.Database.GetOpenConnectionAsync();
-        }
-
+        // Reminder: Check Cache query methods if making changes to tables
         internal static async Task CreateCacheTablesAsync()
         {
-            var db = await OpenDB();
+            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
             if (db == null) return;
             using (db)
             {
@@ -88,13 +82,13 @@ namespace Noikoio.RegexBot.EntityCache
         #region Insertions and updates
         internal static async Task UpdateGuildAsync(SocketGuild g)
         {
-            var db = await OpenDB();
+            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
             if (db == null) return;
             using (db)
             {
                 using (var c = db.CreateCommand())
                 {
-                    c.CommandText = "INSERT INTO " + Sql.TableGuild + " (guild_id, current_name) "
+                    c.CommandText = "INSERT INTO " + TableGuild + " (guild_id, current_name) "
                         + "VALUES (@GuildId, @CurrentName) "
                         + "ON CONFLICT (guild_id) DO UPDATE SET "
                         + "current_name = EXCLUDED.current_name";
@@ -113,13 +107,13 @@ namespace Noikoio.RegexBot.EntityCache
         }
         internal static async Task UpdateGuildMemberAsync(IEnumerable<SocketGuildUser> users)
         {
-            var db = await OpenDB();
+            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
             if (db == null) return;
             using (db)
             {
                 using (var c = db.CreateCommand())
                 {
-                    c.CommandText = "INSERT INTO " + Sql.TableUser
+                    c.CommandText = "INSERT INTO " + TableUser
                         + " (user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url)"
                         + " VALUES (@Uid, @Gid, @Date, @Uname, @Disc, @Nname, @Url) "
                         + "ON CONFLICT (user_id, guild_id) DO UPDATE SET "

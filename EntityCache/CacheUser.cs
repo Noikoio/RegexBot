@@ -1,15 +1,18 @@
-﻿using System;
+﻿using Discord.WebSocket;
+using Npgsql;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.EntityCache
+namespace Noikoio.RegexBot.EntityCache
 {
     /// <summary>
-    /// Represents a cached user.
+    /// Representation of a cached user.
     /// </summary>
-    class UserCacheItem
+    class CacheUser
     {
         readonly ulong _userId;
         readonly ulong _guildId;
@@ -57,8 +60,20 @@ namespace Noikoio.RegexBot.Module.EntityCache
         /// </summary>
         public string AvatarUrl => _avatarUrl;
 
+        private CacheUser(SocketGuildUser u)
+        {
+            _userId = u.Id;
+            _guildId = u.Guild.Id;
+            _cacheDate = DateTime.UtcNow;
+            _username = u.Username;
+            _discriminator = u.Discriminator;
+            _nickname = u.Nickname;
+            _avatarUrl = u.GetAvatarUrl();
+        }
 
-        private UserCacheItem(DbDataReader r)
+        // Double-check SqlHelper if making changes to this constant
+        const string QueryColumns = "user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url";
+        private CacheUser(DbDataReader r)
         {
             // Double-check ordinals if making changes to QueryColumns
             unchecked
@@ -77,20 +92,32 @@ namespace Noikoio.RegexBot.Module.EntityCache
         public override string ToString() => DisplayName;
 
         #region Queries
-        // Double-check constructor if making changes to this constant
-        const string QueryColumns = "user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url";
-
-        /// <summary>
-        /// Attempts to query for an exact result with the given parameters.
-        /// </summary>
-        /// <returns>Null on no result.</returns>
-        public static async Task<UserCacheItem> QueryAsync(ulong guild, ulong user)
+        // Accessible by EntityCache. Documentation is there.
+        internal static async Task<CacheUser> QueryAsync(DiscordSocketClient c, ulong guild, ulong user)
         {
-            using (var db = await RegexBot.Config.Database.GetOpenConnectionAsync())
+            // Local cache search
+            var lresult = LocalQueryAsync(c, guild, user);
+            if (lresult != null) return lresult;
+
+            // Database cache search
+            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
+            if (db == null) return null; // Database not available for query.
+            using (db) return await DbQueryAsync(db, guild, user);
+        }
+
+        private static CacheUser LocalQueryAsync(DiscordSocketClient c, ulong guild, ulong user)
+        {
+            var u = c.GetGuild(guild)?.GetUser(user);
+            if (u == null) return null;
+            return new CacheUser(u);
+        }
+        private static async Task<CacheUser> DbQueryAsync(NpgsqlConnection db, ulong guild, ulong user)
+        {
+            using (db)
             {
                 using (var c = db.CreateCommand())
                 {
-                    c.CommandText = $"SELECT {QueryColumns} FROM {Sql.TableUser} WHERE "
+                    c.CommandText = $"SELECT {QueryColumns} FROM {SqlHelper.TableUser} WHERE "
                         + "user_id = @Uid AND guild_id = @Gid";
                     c.Parameters.Add("@Uid", NpgsqlTypes.NpgsqlDbType.Bigint).Value = user;
                     c.Parameters.Add("@Gid", NpgsqlTypes.NpgsqlDbType.Bigint).Value = guild;
@@ -99,7 +126,7 @@ namespace Noikoio.RegexBot.Module.EntityCache
                     {
                         if (await r.ReadAsync())
                         {
-                            return new UserCacheItem(r);
+                            return new CacheUser(r);
                         }
                         else
                         {
@@ -110,23 +137,21 @@ namespace Noikoio.RegexBot.Module.EntityCache
             }
         }
 
-        private static Regex DiscriminatorSearch = new Regex(@"(.+)#(\d{4}(?!\d))", RegexOptions.Compiled);
+        // -----
 
-        /// <summary>
-        /// Attempts to look up the user given a search string.
-        /// This string looks up case-insensitive, exact matches of nicknames and usernames.
-        /// </summary>
-        /// <returns>An <see cref="IEnumerable{T}"/> containing zero or more query results, sorted by cache date.</returns>
-        public static async Task<IEnumerable<UserCacheItem>> QueryAsync(ulong guild, string search)
+        private static Regex DiscriminatorSearch = new Regex(@"(.+)#(\d{4}(?!\d))", RegexOptions.Compiled);
+        // Accessible by EntityCache. Documentation is there.
+        internal static async Task<IEnumerable<CacheUser>> QueryAsync(DiscordSocketClient c, ulong guild, string search)
         {
-            // Is search just a number? It's an ID.
+            // Is search just a number? Assume ID, pass it on to the correct place.
             if (ulong.TryParse(search, out var presult))
             {
-                var r = await QueryAsync(guild, presult);
-                if (r == null) return new UserCacheItem[0];
-                else return new UserCacheItem[] { r };
+                var r = await QueryAsync(c, guild, presult);
+                if (r == null) return new CacheUser[0];
+                else return new CacheUser[] { r };
             }
 
+            // Split name/discriminator
             string name;
             string disc;
             var split = DiscriminatorSearch.Match(search);
@@ -141,14 +166,52 @@ namespace Noikoio.RegexBot.Module.EntityCache
                 disc = null;
             }
 
-            // Storing in HashSet to enforce uniqueness
-            HashSet<UserCacheItem> result = new HashSet<UserCacheItem>(_uc);
+            // Local cache search
+            var lresult = LocalQueryAsync(c, guild, name, disc);
+            if (lresult.Count() != 0) return lresult;
 
-            using (var db = await RegexBot.Config.Database.GetOpenConnectionAsync())
+            // Database cache search
+            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
+            if (db == null) return null; // Database not available for query.
+            using (db) return await DbQueryAsync(db, guild, name, disc);
+        }
+
+        private static IEnumerable<CacheUser> LocalQueryAsync(DiscordSocketClient c, ulong guild, string name, string disc)
+        {
+            var g = c.GetGuild(guild);
+            if (g == null) return new CacheUser[] { };
+
+            bool Filter(string iun, string inn, string idc)
+            {
+                // Same logic as in the SQL query in the method below this one
+                bool match =
+                    string.Equals(iun, name, StringComparison.InvariantCultureIgnoreCase)
+                    || string.Equals(inn, name, StringComparison.InvariantCultureIgnoreCase);
+
+                if (match && disc != null)
+                    match = idc.Equals(disc);
+
+                return match;
+            }
+
+            var qresult = g.Users.Where(i => Filter(i.Username, i.Nickname, i.Discriminator));
+            var result = new List<CacheUser>();
+            foreach (var item in qresult)
+            {
+                result.Add(new CacheUser(item));
+            }
+            return result;
+        }
+
+        private static async Task<IEnumerable<CacheUser>> DbQueryAsync(NpgsqlConnection db, ulong guild, string name, string disc)
+        {
+            var result = new List<CacheUser>();
+
+            using (db = await RegexBot.Config.Database.GetOpenConnectionAsync())
             {
                 using (var c = db.CreateCommand())
                 {
-                    c.CommandText = $"SELECT {QueryColumns} FROM {Sql.TableUser} WHERE "
+                    c.CommandText = $"SELECT {QueryColumns} FROM {SqlHelper.TableUser} WHERE "
                         + "( lower(username) = lower(@NameSearch) OR lower(nickname) = lower(@NameSearch) )";
                     c.Parameters.Add("@NameSearch", NpgsqlTypes.NpgsqlDbType.Text).Value = name;
                     if (disc != null)
@@ -162,20 +225,12 @@ namespace Noikoio.RegexBot.Module.EntityCache
                     {
                         while (await r.ReadAsync())
                         {
-                            result.Add(new UserCacheItem(r));
+                            result.Add(new CacheUser(r));
                         }
                     }
                 }
             }
             return result;
-        }
-
-        private static UniqueChecker _uc = new UniqueChecker();
-        class UniqueChecker : IEqualityComparer<UserCacheItem>
-        {
-            public bool Equals(UserCacheItem x, UserCacheItem y) => x.UserId == y.UserId && x.GuildId == y.GuildId;
-
-            public int GetHashCode(UserCacheItem obj) => unchecked((int)(obj.UserId ^ obj.GuildId));
         }
         #endregion
     }
