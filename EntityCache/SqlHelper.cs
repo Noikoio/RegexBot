@@ -1,13 +1,15 @@
-﻿using Npgsql;
+﻿using Discord.WebSocket;
+using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.EntityCache
 {
     /// <summary>
     /// Helper methods for database operations.
+    /// Exceptions are not handled within methods of this class.
     /// </summary>
     static class SqlHelper
     {
@@ -21,7 +23,7 @@ namespace Noikoio.RegexBot.EntityCache
             return await RegexBot.Config.Database.GetOpenConnectionAsync();
         }
 
-        public static async Task CreateCacheTables()
+        internal static async Task CreateCacheTablesAsync()
         {
             var db = await OpenDB();
             if (db == null) return;
@@ -84,13 +86,72 @@ namespace Noikoio.RegexBot.EntityCache
         }
 
         #region Insertions and updates
-        static async Task UpdateGuild()
+        internal static async Task UpdateGuildAsync(SocketGuild g)
         {
             var db = await OpenDB();
             if (db == null) return;
             using (db)
             {
+                using (var c = db.CreateCommand())
+                {
+                    c.CommandText = "INSERT INTO " + Sql.TableGuild + " (guild_id, current_name) "
+                        + "VALUES (@GuildId, @CurrentName) "
+                        + "ON CONFLICT (guild_id) DO UPDATE SET "
+                        + "current_name = EXCLUDED.current_name";
+                    c.Parameters.Add("@GuildId", NpgsqlDbType.Bigint).Value = g.Id;
+                    c.Parameters.Add("@CurrentName", NpgsqlDbType.Text).Value = g.Name;
+                    c.Prepare();
+                    await c.ExecuteNonQueryAsync();
+                }
+            }
+        }
 
+        internal static Task UpdateGuildMemberAsync(SocketGuildUser user)
+        {
+            var ml = new SocketGuildUser[] { user };
+            return UpdateGuildMemberAsync(ml);
+        }
+        internal static async Task UpdateGuildMemberAsync(IEnumerable<SocketGuildUser> users)
+        {
+            var db = await OpenDB();
+            if (db == null) return;
+            using (db)
+            {
+                using (var c = db.CreateCommand())
+                {
+                    c.CommandText = "INSERT INTO " + Sql.TableUser
+                        + " (user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url)"
+                        + " VALUES (@Uid, @Gid, @Date, @Uname, @Disc, @Nname, @Url) "
+                        + "ON CONFLICT (user_id, guild_id) DO UPDATE SET "
+                        + "cache_date = EXCLUDED.cache_date, username = EXCLUDED.username, "
+                        + "discriminator = EXCLUDED.discriminator, " // I've seen someone's discriminator change this one time...
+                        + "nickname = EXCLUDED.nickname, avatar_url = EXCLUDED.avatar_url";
+
+                    var uid = c.Parameters.Add("@Uid", NpgsqlDbType.Bigint);
+                    var gid = c.Parameters.Add("@Gid", NpgsqlDbType.Bigint);
+                    c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = DateTime.Now;
+                    var uname = c.Parameters.Add("@Uname", NpgsqlDbType.Text);
+                    var disc = c.Parameters.Add("@Disc", NpgsqlDbType.Text);
+                    var nname = c.Parameters.Add("@Nname", NpgsqlDbType.Text);
+                    var url = c.Parameters.Add("@Url", NpgsqlDbType.Text);
+                    c.Prepare();
+
+                    foreach (var item in users)
+                    {
+                        if (item.IsBot || item.IsWebhook) continue;
+
+                        uid.Value = item.Id;
+                        gid.Value = item.Guild.Id;
+                        uname.Value = item.Username;
+                        disc.Value = item.Discriminator;
+                        nname.Value = item.Nickname;
+                        if (nname.Value == null) nname.Value = DBNull.Value; // why can't ?? work here?
+                        url.Value = item.GetAvatarUrl();
+                        if (url.Value == null) url.Value = DBNull.Value;
+
+                        await c.ExecuteNonQueryAsync();
+                    }
+                }
             }
         }
         #endregion
