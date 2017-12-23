@@ -29,6 +29,7 @@ namespace Noikoio.RegexBot.EntityCache
                 client.GuildUpdated += Client_GuildUpdated;
                 client.GuildMemberUpdated += Client_GuildMemberUpdated;
                 client.UserJoined += Client_UserJoined;
+                client.UserLeft += Client_UserLeft;
             }
             else
             {
@@ -37,8 +38,7 @@ namespace Noikoio.RegexBot.EntityCache
         }
 
         public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
-
-        #region Event handling
+        
         // Guild and guild member information has become available.
         // This is a very expensive operation, especially when joining larger guilds.
         private async Task Client_GuildAvailable(SocketGuild arg)
@@ -104,7 +104,21 @@ namespace Noikoio.RegexBot.EntityCache
                 }
             });
         }
-        #endregion
-        
+
+        // User left the guild. No new data, but gives an excuse to update the cache date.
+        private async Task Client_UserLeft(SocketGuildUser arg)
+        {
+            await Task.Run(async () =>
+            {
+                try
+                {
+                    await SqlHelper.UpdateGuildMemberAsync(arg);
+                }
+                catch (NpgsqlException ex)
+                {
+                    await Log($"SQL error in {nameof(Client_UserLeft)}: {ex.Message}");
+                }
+            });
+        }
     }
 }
