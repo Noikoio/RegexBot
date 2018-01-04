@@ -43,7 +43,8 @@ namespace Noikoio.RegexBot.EntityCache
                         + "channel_id bigint not null primary key, "
                         + $"guild_id bigint not null references {TableGuild}, "
                         + "cache_date timestamptz not null, "
-                        + "name text not null";
+                        + "channel_name text not null"
+                        + ")";
                     await c.ExecuteNonQueryAsync();
                 }
                 // As of the time of this commit, Discord doesn't allow any uppercase characters
@@ -73,7 +74,7 @@ namespace Noikoio.RegexBot.EntityCache
                 using (var c = db.CreateCommand())
                 {
                     c.CommandText = "CREATE INDEX IF NOT EXISTS "
-                        + $"{TableUser}_usersearch_idx on {TableUser} LOWER(username)";
+                        + $"{TableUser}_usersearch_idx on {TableUser} (LOWER(username))";
                     await c.ExecuteNonQueryAsync();
                 }
             }
@@ -88,12 +89,13 @@ namespace Noikoio.RegexBot.EntityCache
             {
                 using (var c = db.CreateCommand())
                 {
-                    c.CommandText = "INSERT INTO " + TableGuild + " (guild_id, current_name) "
-                        + "VALUES (@GuildId, @CurrentName) "
+                    c.CommandText = "INSERT INTO " + TableGuild + " (guild_id, cache_date, current_name) "
+                        + "VALUES (@GuildId, @Date, @CurrentName) "
                         + "ON CONFLICT (guild_id) DO UPDATE SET "
-                        + "current_name = EXCLUDED.current_name";
+                        + "current_name = EXCLUDED.current_name, cache_date = EXCLUDED.cache_date";
                     c.Parameters.Add("@GuildId", NpgsqlDbType.Bigint).Value = g.Id;
                     c.Parameters.Add("@CurrentName", NpgsqlDbType.Text).Value = g.Name;
+                    c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = DateTime.Now;
                     c.Prepare();
                     await c.ExecuteNonQueryAsync();
                 }
