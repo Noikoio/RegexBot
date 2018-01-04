@@ -32,7 +32,7 @@ namespace Noikoio.RegexBot.EntityCache
         /// This string looks up case-insensitive, exact matches of nicknames and usernames.
         /// </summary>
         /// <returns>An <see cref="IEnumerable{T}"/> containing zero or more query results, sorted by cache date.</returns>
-        internal static Task<IEnumerable<CacheUser>> QueryAsync(DiscordSocketClient c, ulong guild, string search)
+        internal static Task<IEnumerable<CacheUser>> QueryAsync(ulong guild, string search)
             => CacheUser.QueryAsync(_client, guild, search);
     }
 }
