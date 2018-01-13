@@ -1,22 +1,24 @@
 ## AutoMod
 
-AutoMod is a component that takes inspiration from Reddit's [Automoderator](https://www.reddit.com/wiki/automoderator). It allows the user to define one or more *rules* based on regular expression (regex) patterns. When the rule is matched, the bot will proceed to to execute a *response*. This was initially the main and only feature of this bot, hence its name RegexBot.
+AutoMod is a component that takes inspiration from Reddit's [Automoderator](https://www.reddit.com/wiki/automoderator). It was the original feature of RegexBot. It allows the operator to define one or more *rules* based on regular expression (regex) patterns. When a particular rule is matched, the bot executes the appropriate *response*.
 
-AutoMod rules are defined per-server within the `automod` object. Each rule is defined as a name/value pair, with the name serving as its label.
+AutoMod is set up by defining rules within a JSON object named `automod` within a server definition. Rules are defined by means of name/value pairs, with the name serving as its label.
 
-Sample AutoMod rules:
+Sample within a [server definition](serverdef.html):
 ```
-"Delete bilingual pirates": {
-    "regex": [ "pira(te|cy)", "pirat(a|ería)", ],
-    "response": [
-        "delete"
-        "report #0000000::mod-queue"
-    ]
-},
-"Selective trigger": {
-    "regex": "secret",
-    "response: "say #_ Don't say the s word, @_!",
-    whitelist: { "channels": [ "#dont-say-secret" ] }
+"automod": {
+    "Delete bilingual pirates": {
+        "regex": [ "pira(te|cy)", "pirat(a|ería)", ],
+        "response": [
+            "delete"
+            "report #0000000::mod-queue"
+        ]
+    },
+    "Selective trigger": {
+        "regex": "secret",
+        "response: "say #_ Don't say the s word, @_!",
+        whitelist: { "channels": [ "#dont-say-secret" ] }
+    }
 }
 ```
 
@@ -24,15 +26,18 @@ Sample AutoMod rules:
 The following is a list of accepted members within an AutoMod rule:
 * regex (*string* or *string array*) - **Required.** Regular expression pattern(s) that trigger the defined rule.
 * response (*string* or *string array*) - **Required.** Response, or list of responses to execute.
-  * See the section below for more information on responses.
-* whitelist *[(entity list)](entitylist.html)* - Entities to which the rule exclusively applies to.
-* blacklist *[(entity list)](entitylist.html)* - Entities to which the rule does not apply to.
-* exempt *[(entity list)](entitylist.html)* - Entities which are exempt from whitelist or blacklist rules.
+  * See the section below for more information on defining responses.
+* whitelist (*[entity list](entitylist.html)*) - Entities to which the rule exclusively applies to.<sup>1</sup>
+* blacklist (*[entity list](entitylist.html)*) - Entities to which the rule does not apply to.<sup>1</sup>
+* exempt (*[entity list](entitylist.html)*) - Entities which are exempt from whitelist or blacklist rules.<sup>2</sup>
   * For example: It would allow for a specific user to trigger a rule, despite being a member of a blocked role.
 * AllowModBypass *(boolean)* - Specifies if those defined within the *moderators* list for the server should be exempt from triggering this rule. Defaults to *true*.
 
+<sup>1</sup> A rule may either contain a whitelist or blacklist, but not both.
+<sup>2</sup> Used only if a whitelist or blacklist have been specified.
+
 ### Responses
-Responses are the actions executed when a rule is matched. They take the form of one or more strings defined within a single rule. Defining a response could be considered to be similar to typing out a command, with particular responses requiring a number of parameters.
+A response is the action, or list of actions, to be executed when a rule is matched. Defining a response could be considered to be similar to typing out a command or a batch script, with certain responses requiring a number of parameters.
 
 The following responses are currently implemented:
 * ban - Immediately bans the user that triggered the rule.
@@ -47,4 +52,6 @@ The following responses are currently implemented:
 * say *target_entity* *message* - Sends *message* to the given *target_entity*.
   * Aliases: send
 
-For responses that support parameters, it is possible to specify the matching user or the channel in which the match occurred as a parameter. This is done using `@_` and `#_`, respectively. Additionally it is possible to define a user or channel in the same way as items in an entity list, by using either the entity's ID, name, or both.
+In regards to responses that accept *target* parameters, it is possible to specify the target to be the user who triggered the rule or the channel in which the rule was triggered in. This is done by specifying the parameter as `@_` or `#_`, respectively. The sample above shows an example of this.
+
+Additionally, targets may be defined in the same type of format accepted within [entity lists](entitylist.html). This is also shown in the above example.
