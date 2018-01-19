@@ -20,8 +20,6 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
         private readonly string _successMsg;
         private readonly string _notifyMsg;
 
-        const string DefaultMsg = "You have been {0} from $s for the following reason:\n$r";
-
         // Configuration:
         // "forcereason" - boolean; Force a reason to be given. Defaults to false.
         // "purgedays" - integer; Number of days of target's post history to delete, if banning.
@@ -43,7 +41,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             if (conf["notifymsg"] == null)
             {
                 // Message not specified - use default
-                _notifyMsg = string.Format(DefaultMsg, mode == CommandMode.Ban ? "banned" : "kicked");
+                _notifyMsg = string.Format(NotifyDefault, mode == CommandMode.Ban ? "banned" : "kicked");
             }
             else
             {
@@ -52,6 +50,18 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 else _notifyMsg = val;
             }
         }
+
+        #region Strings
+        const string FailPrefix = ":x: **Failed to {0} user:** ";
+        const string Fail403 = "I do not have the required permissions to perform that action.";
+        const string Fail404 = "The target user is no longer available.";
+        const string FailDefault = "An unknown error occurred. Notify the bot operator.";
+        const string NotifyDefault = "You have been {0} from $s for the following reason:\n$r";
+        const string NotifyReasonNone = "No reason specified.";
+        const string NotifyFailed = "\n(User was unable to receive notification message.)";
+        const string ReasonRequired = ":x: **You must specify a reason.**";
+        const string TargetNotFound = ":x: **Unable to determine the target user.**";
+        #endregion
 
         // Usage: (command) (mention) (reason)
         public override async Task Invoke(SocketGuild g, SocketMessage msg)
@@ -76,7 +86,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 // No reason given
                 if (_forceReason)
                 {
-                    await SendUsageMessage(msg, ":x: **You must specify a reason.**");
+                    await SendUsageMessage(msg, ReasonRequired);
                     return;
                 }
                 reason = null;
@@ -92,7 +102,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             var qres = (await EntityCache.EntityCache.QueryAsync(g.Id, targetstr)).FirstOrDefault();
             if (qres == null)
             {
-                await SendUsageMessage(msg, ":x: **Unable to determine the target user.**");
+                await SendUsageMessage(msg, TargetNotFound);
                 return;
             }
             ulong targetuid = qres.UserId;
@@ -102,30 +112,12 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             if (_mode == CommandMode.Kick && targetobj == null)
             {
                 // Can't kick without obtaining the user object
-                await SendUsageMessage(msg, ":x: **Unable to find the target user.**");
+                await SendUsageMessage(msg, TargetNotFound);
                 return;
             }
 
             // Send out message
-            bool notifyfail = false;
-            if (_notifyMsg != null && targetobj != null)
-            {
-                var ch = targetobj.GetOrCreateDMChannelAsync();
-                string outresult = _notifyMsg;
-                outresult = outresult.Replace("$s", g.Name);
-                outresult = outresult.Replace("$r", reason ?? "No reason specified.");
-                try
-                {
-                    await (await ch).SendMessageAsync(outresult);
-                }
-                catch (Discord.Net.HttpException ex)
-                {
-                    await Log("Failed to send out notification to target over DM: "
-                        + Enum.GetName(typeof(System.Net.HttpStatusCode), ex.HttpCode));
-                    notifyfail = true;
-                }
-            }
-            else notifyfail = true;
+            var notifyTask = SendNotificationMessage(targetobj, reason);
 
             // Do the action
             try
@@ -141,29 +133,49 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 #warning "Actual kick/ban action is DISABLED during debug."
 #endif
                 string resultmsg = BuildSuccessMessage(targetdisp);
-                if (notifyfail)
-                {
-                    resultmsg += $"\n(could not send " + (_mode == CommandMode.Ban ? "ban" : "kick") + " notification to user.)";
-                }
+                if (await notifyTask == false) resultmsg += NotifyFailed;
                 await msg.Channel.SendMessageAsync(resultmsg);
             }
             catch (Discord.Net.HttpException ex)
             {
-                string err = ":x: **Failed to " + (_mode == CommandMode.Ban ? "ban" : "kick") + " user:** ";
+                string err = string.Format(FailPrefix, (_mode == CommandMode.Ban ? "ban" : "kick"));
                 if (ex.HttpCode == System.Net.HttpStatusCode.Forbidden)
                 {
-                    await msg.Channel.SendMessageAsync(err + "I do not have sufficient permissions to do that action.");
+                    await msg.Channel.SendMessageAsync(err + Fail403);
                 }
                 else if (ex.HttpCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    await msg.Channel.SendMessageAsync(err + "The target user appears to no longer exist.");
+                    await msg.Channel.SendMessageAsync(err + Fail404);
                 }
                 else
                 {
-                    await msg.Channel.SendMessageAsync(err + "An unknown error occurred. Details have been logged.");
+                    await msg.Channel.SendMessageAsync(err + FailDefault);
                     await Log(ex.ToString());
                 }
             }
+        }
+
+        // Returns true on message send success
+        private async Task<bool> SendNotificationMessage(SocketGuildUser target, string reason)
+        {
+            if (_notifyMsg == null) return true;
+            if (target == null) return false;
+
+            var ch = await target.GetOrCreateDMChannelAsync();
+            string outresult = _notifyMsg;
+            outresult = outresult.Replace("$s", g.Name);
+            outresult = outresult.Replace("$r", reason ?? NotifyReasonNone);
+            try
+            {
+                await ch.SendMessageAsync(outresult);
+            }
+            catch (Discord.Net.HttpException ex)
+            {
+                await Log("Failed to send out notification to target over DM: "
+                    + Enum.GetName(typeof(System.Net.HttpStatusCode), ex.HttpCode));
+                return false;
+            }
+            return true;
         }
 
         private async Task SendUsageMessage(SocketMessage m, string message)
