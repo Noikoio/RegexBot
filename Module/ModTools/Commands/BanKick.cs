@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -82,22 +83,21 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             }
 
             // Getting SocketGuildUser target
+            SocketGuildUser targetobj = null;
+
+            // Extract snowflake value from mention (if a mention was given)
             Match m = UserMention.Match(targetstr);
             if (m.Success) targetstr = m.Groups["snowflake"].Value;
 
-            SocketGuildUser targetobj = null;
-            ulong targetuid;
-            string targetdisp;
-            if (ulong.TryParse(targetstr, out targetuid))
-            {
-                targetobj = g.GetUser(targetuid);
-                targetdisp = (targetobj == null ? $"ID {targetuid}" : targetobj.ToString());
-            }
-            else
+            var qres = (await EntityCache.EntityCache.QueryAsync(g.Id, targetstr)).FirstOrDefault();
+            if (qres == null)
             {
                 await SendUsageMessage(msg, ":x: **Unable to determine the target user.**");
                 return;
             }
+            ulong targetuid = qres.UserId;
+            targetobj = g.GetUser(targetuid);
+            string targetdisp = targetobj?.ToString() ?? $"ID {targetuid}";
 
             if (_mode == CommandMode.Kick && targetobj == null)
             {
