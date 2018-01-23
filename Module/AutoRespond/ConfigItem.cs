@@ -13,6 +13,7 @@ namespace Noikoio.RegexBot.Module.AutoRespond
     class ConfigItem
     {
         public enum ResponseType { None, Exec, Reply }
+        private static Random ChangeRng = new Random();
 
         string _label;
         IEnumerable<Regex> _regex;
@@ -20,12 +21,14 @@ namespace Noikoio.RegexBot.Module.AutoRespond
         string _rbody;
         private FilterList _filter;
         private RateLimitCache _limit;
+        private double _random;
 
         public string Label => _label;
         public IEnumerable<Regex> Regex => _regex;
         public (ResponseType, string) Response => (_rtype, _rbody);
         public FilterList Filter => _filter;
         public RateLimitCache RateLimit => _limit;
+        public double RandomChance => _random;
 
         public ConfigItem(JProperty definition)
         {
@@ -119,6 +122,24 @@ namespace Noikoio.RegexBot.Module.AutoRespond
                     throw new RuleImportException("Rate limit value is invalid" + errorpfx);
                 }
             }
+
+            // random chance
+            string randstr = data["RandomChance"]?.Value<string>();
+            if (string.IsNullOrWhiteSpace(randstr))
+            {
+                _random = double.NaN;
+            }
+            else
+            {
+                if (!double.TryParse(randstr, out _random))
+                {
+                    throw new RuleImportException("Random value is invalid (unable to parse)" + errorpfx);
+                }
+                if (_random > 1 || _random < 0)
+                {
+                    throw new RuleImportException("Random value is invalid (not between 0 and 1)" + errorpfx);
+                }
+            }
         }
 
         /// <summary>
@@ -144,6 +165,15 @@ namespace Noikoio.RegexBot.Module.AutoRespond
 
             // Rate limit check - currently per channel
             if (!RateLimit.AllowUsage(m.Channel.Id)) return false;
+
+            // Random chance check
+            if (!double.IsNaN(RandomChance))
+            {
+                // Fail if randomly generated value is higher than the parameter
+                // Example: To fail a 75% chance, the check value must be between 0.75000...001 and 1.0.
+                var chk = ChangeRng.NextDouble();
+                if (chk > RandomChance) return false;
+            }
 
             return true;
         }

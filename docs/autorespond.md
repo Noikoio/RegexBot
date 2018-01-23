@@ -18,7 +18,8 @@ Sample within a [server definition](serverdef.html):
             "dumb",
             "productive conversation"
         ],
-        "exec": "python /home/bot/did-someone-say-botspam.py"
+        "exec": "python /home/bot/did-someone-say-botspam.py",
+		"RandomChance": 0.5
     }
 }
 ```
@@ -26,8 +27,9 @@ Sample within a [server definition](serverdef.html):
 ### Definition structure
 The following is a list of accepted members within an AutoRespond definition:
 * regex (*string* or *string array*) - **Required.** Regular expression pattern(s) that will invoke the response.
-* reply *(string)* - The message to send out to the channel in which the response was invoked.<sup>1</sup>
-* exec *(string)* - Command line path and optional parameters to an external program. The program's output will be sent to the channel in which the response was invoked.<sup>1</sup>
-* ratelimit *(integer)* - The amount of time in seconds in which the response may not be triggered again within the same channel. Defaults to 20.
+* reply (*string*) - The message to send out to the channel in which the response was invoked.<sup>1</sup>
+* exec (*string*) - Command line path and optional parameters to an external program. The program's output will be sent to the channel in which the response was invoked.<sup>1</sup>
+* ratelimit (*integer*) - The amount of time in seconds in which the response may not be triggered again within the same channel. Defaults to 20.
+* RandomChance (*number*) - A value between 0 and 1 representing the percent chance for the bot to respond to the corresponding trigger. Defaults to 1.0 (100%).
 
 <sup>1</sup> It is **required** to have either *reply* or *exec* specified in a definition.
