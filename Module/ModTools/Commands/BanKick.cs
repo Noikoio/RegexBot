@@ -163,7 +163,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 
             var ch = await target.GetOrCreateDMChannelAsync();
             string outresult = _notifyMsg;
-            outresult = outresult.Replace("$s", g.Name);
+            outresult = outresult.Replace("$s", target.Guild.Name);
             outresult = outresult.Replace("$r", reason ?? NotifyReasonNone);
             try
             {
