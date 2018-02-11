@@ -212,7 +212,8 @@ namespace Noikoio.RegexBot.EntityCache
                 using (var c = db.CreateCommand())
                 {
                     c.CommandText = $"SELECT {QueryColumns} FROM {SqlHelper.TableUser} WHERE "
-                        + "( lower(username) = lower(@NameSearch) OR lower(nickname) = lower(@NameSearch) )";
+                        + "( lower(username) = lower(@NameSearch) OR lower(nickname) = lower(@NameSearch) ) "
+                        + "ORDER BY cache_date desc, username";
                     c.Parameters.Add("@NameSearch", NpgsqlTypes.NpgsqlDbType.Text).Value = name;
                     if (disc != null)
                     {
