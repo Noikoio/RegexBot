@@ -15,7 +15,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
         static void CreateTables()
         {
-            using (var db = RegexBot.Config.Database.GetOpenConnectionAsync().GetAwaiter().GetResult())
+            using (var db = RegexBot.Config.GetOpenDatabaseConnectionAsync().GetAwaiter().GetResult())
             {
                 using (var c = db.CreateCommand())
                 {
@@ -24,11 +24,11 @@ namespace Noikoio.RegexBot.Module.ModLogs
                         + "entry_ts timestamptz not null, "
                         + "guild_id bigint not null, "
                         + "target_id bigint not null, "
-                        + $"invoke_id bigint null references {EntityCache.Sql.TableUser}.user_id, "
+                        + $"invoke_id bigint null references {EntityCache.SqlHelper.TableUser}.user_id, "
                         + "target_channel_id bigint null, " // TODO channel cache reference?
                         + "category text not null, "
                         + "message text not null, "
-                        + $"FOREIGN KEY (target_id, guild_id) REFERENCES {EntityCache.Sql.TableUser} (user_id, guild_id)";
+                        + $"FOREIGN KEY (target_id, guild_id) REFERENCES {EntityCache.SqlHelper.TableUser} (user_id, guild_id)";
                     c.ExecuteNonQuery();
                 }
                 using (var c = db.CreateCommand())
