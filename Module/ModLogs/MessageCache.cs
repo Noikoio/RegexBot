@@ -1,64 +1,63 @@
 ﻿using Discord.WebSocket;
-using Newtonsoft.Json.Linq;
-using Noikoio.RegexBot.ConfigItem;
 using Npgsql;
 using NpgsqlTypes;
+using System;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.DBCache
+namespace Noikoio.RegexBot.Module.ModLogs
 {
     /// <summary>
-    /// Caches information regarding all incoming messages.
-    /// The function of this feature should be transparent to the user, and thus no configuration is needed.
+    /// Helper class for <see cref="ModLogs"/>. Keeps a database-backed cache of recent messages and assists
+    /// in reporting message changes and deletions, if configured to do so.
+    /// Does not manipulate the moderation log managed by the main class, but rather provides supplemental features.
     /// </summary>
-    class MessageCache : BotFeature
+    class MessageCache
     {
-        // TODO Something that clears expired cache items
-        private readonly DatabaseConfig _db;
+        private readonly DiscordSocketClient _dClient;
+        private readonly AsyncLogger _outLog;
+        private readonly Func<ulong, object> _outGetConfig;
 
-        public override string Name => nameof(MessageCache);
-
-        public MessageCache(DiscordSocketClient client) : base(client)
+        public MessageCache(DiscordSocketClient client, AsyncLogger logger, Func<ulong, object> getConfFunc)
         {
-            _db = RegexBot.Config.Database;
+            _dClient = client;
+            _outLog = logger;
+            _outGetConfig = getConfFunc;
 
-            if (_db.Enabled)
-            {
-                CreateCacheTables();
+            CreateCacheTables();
 
-                client.MessageReceived += Client_MessageReceived;
-                //client.MessageUpdated += Client_MessageUpdated;
-            }
-            else
-            {
-                Log("No database storage available.").Wait();
-            }
+            client.MessageReceived += Client_MessageReceived;
+            client.MessageUpdated += Client_MessageUpdated;
+            client.MessageDeleted += Client_MessageDeleted;
         }
-
-        #region Table setup
-        const string TableMessage = "cache_messages";
-        
-        public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
 
         #region Event handling
-        // A new message has been created
-        private async Task Client_MessageReceived(SocketMessage arg)
+        private async Task Client_MessageReceived(SocketMessage arg) => await CacheMessage(arg);
+
+        private Task Client_MessageUpdated(Discord.Cacheable<Discord.IMessage, ulong> arg1, SocketMessage arg2, ISocketMessageChannel arg3)
         {
-            await Task.Run(() => CacheMessage(arg));
+            /*
+             * TODO:
+             * Edited messages seem to retain their ID. Need to look into this.
+             * In any case, the new message must be stored in case of future edits.
+             * The change must be sent to the reporting channel (if one exists) as if it were
+             * a typical log entry (even though it's not).
+             */
+            throw new NotImplementedException();
         }
-        
-        //private Task Client_MessageUpdated(Discord.Cacheable<Discord.IMessage, ulong> arg1, SocketMessage arg2, ISocketMessageChannel arg3)
-        /*
-         * Edited messages seem to retain their ID. This is a problem.
-         * The point of this message cache was to have another feature be able to relay
-         * both the previous and current message at once.
-         * For now: Do nothing on updated messages.
-        */
+
+        private Task Client_MessageDeleted(Discord.Cacheable<Discord.IMessage, ulong> arg1, ISocketMessageChannel arg2)
+        {
+            // TODO report message deletion, if reporting channel exists and message is in cache.
+            throw new NotImplementedException();
+        }
         #endregion
+
+        #region Database manipulation
+        const string TableMessage = "cache_messages";
 
         private void CreateCacheTables()
         {
-            using (var db = _db.GetOpenConnectionAsync().GetAwaiter().GetResult())
+            using (var db = RegexBot.Config.GetOpenDatabaseConnectionAsync().GetAwaiter().GetResult())
             {
                 using (var c = db.CreateCommand())
                 {
@@ -70,9 +69,9 @@ namespace Noikoio.RegexBot.Module.DBCache
                         + "created_ts timestamptz not null, "
                         + "edited_ts timestamptz null, "
                         + "message text not null, "
-                        + $"FOREIGN KEY (author_id, guild_id) references {EntityCache.Sql.TableUser} (user_id, guild_id)"
+                        + $"FOREIGN KEY (author_id, guild_id) references {EntityCache.SqlHelper.TableUser} (user_id, guild_id)"
                         + ")";
-                    // TODO figure out how to store message edits
+                    // TODO are more columns needed for edit info?
                     c.ExecuteNonQuery();
                 }
             }
@@ -83,7 +82,7 @@ namespace Noikoio.RegexBot.Module.DBCache
         {
             try
             {
-                using (var db = await _db.GetOpenConnectionAsync())
+                using (var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync())
                 {
                     using (var c = db.CreateCommand())
                     {
@@ -103,7 +102,7 @@ namespace Noikoio.RegexBot.Module.DBCache
             }
             catch (NpgsqlException ex)
             {
-                await Log($"SQL error in {nameof(CacheMessage)}: " + ex.Message);
+                await _outLog($"SQL error in {nameof(CacheMessage)}: " + ex.Message);
             }
         }
     }
