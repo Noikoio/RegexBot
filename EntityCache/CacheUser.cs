@@ -100,7 +100,7 @@ namespace Noikoio.RegexBot.EntityCache
             if (lresult != null) return lresult;
 
             // Database cache search
-            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
+            var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
             if (db == null) return null; // Database not available for query.
             using (db) return await DbQueryAsync(db, guild, user);
         }
@@ -171,7 +171,7 @@ namespace Noikoio.RegexBot.EntityCache
             if (lresult.Count() != 0) return lresult;
 
             // Database cache search
-            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
+            var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
             if (db == null) return null; // Database not available for query.
             using (db) return await DbQueryAsync(db, guild, name, disc);
         }
@@ -207,7 +207,7 @@ namespace Noikoio.RegexBot.EntityCache
         {
             var result = new List<CacheUser>();
 
-            using (db = await RegexBot.Config.Database.GetOpenConnectionAsync())
+            using (db = await RegexBot.Config.GetOpenDatabaseConnectionAsync())
             {
                 using (var c = db.CreateCommand())
                 {

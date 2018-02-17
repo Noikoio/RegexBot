@@ -29,7 +29,6 @@ namespace Noikoio.RegexBot
 
         public string BotUserToken => _botToken;
         public string CurrentGame => _currentGame;
-        public DatabaseConfig Database => _dbConfig;
 
         public ServerConfig[] Servers => _servers;
 
@@ -72,22 +71,44 @@ namespace Noikoio.RegexBot
         /// <summary>
         /// Loads essential, unchanging values needed for bot startup. Returns false on failure.
         /// </summary>
-        public bool LoadInitialConfig()
+        internal bool LoadInitialConfig()
         {
             var lt = LoadFile();
             lt.Wait();
             JObject conf = lt.Result;
             if (conf == null) return false;
 
+            var log = Logger.GetLogger(LogPrefix);
+
             _botToken = conf["bot-token"]?.Value<string>();
             if (String.IsNullOrWhiteSpace(_botToken))
             {
-                Logger.GetLogger(LogPrefix)("Error: Bot token not defined. Cannot continue.").Wait();
+                log("Error: Bot token not defined. Cannot continue.").Wait();
                 return false;
             }
             _currentGame = conf["playing"]?.Value<string>();
 
-            _dbConfig = new DatabaseConfig(conf["database"]);
+            // Database configuration:
+            // Either it exists or it doesn't. Read config, but also attempt to make a database connection
+            // right here, or else make it known that database support is disabled for this instance.
+            try
+            {
+                _dbConfig = new DatabaseConfig(conf["database"]);
+                var conn = _dbConfig.GetOpenConnectionAsync().GetAwaiter().GetResult();
+                conn.Dispose();
+            }
+            catch (DatabaseConfig.DatabaseConfigLoadException ex)
+            {
+                if (ex.Message == "") log("Database configuration not found.").Wait();
+                else log("Error within database config: " + ex.Message).Wait();
+                _dbConfig = null;
+            }
+            catch (Npgsql.NpgsqlException ex)
+            {
+                log("An error occurred while establishing initial database connection: " + ex.Message).Wait();
+                _dbConfig = null;
+            }
+            // Modules that will not enable due to lack of database access should say so in their constructors.
 
             return true;
         }
@@ -179,7 +200,23 @@ namespace Noikoio.RegexBot
             _servers = newservers.ToArray();
             return true;
         }
-    }
 
-    
+        /// <summary>
+        /// Gets a value stating if database access is available.
+        /// Specifically, indicates if <see cref="GetOpenDatabaseConnectionAsync"/> will return a non-null value.
+        /// </summary>
+        /// <remarks>
+        /// Ideally, this value remains constant on runtime. It does not take into account
+        /// the possibility of the database connection failing during the program's run time.
+        /// </remarks>
+        public bool DatabaseAvailable => _dbConfig != null;
+        /// <summary>
+        /// Gets an opened connection to the SQL database, if available.
+        /// </summary>
+        /// <returns>
+        /// An <see cref="Npgsql.NpgsqlConnection"/> in the opened state,
+        /// or null if an SQL database is not available.
+        /// </returns>
+        public Task<Npgsql.NpgsqlConnection> GetOpenDatabaseConnectionAsync() => _dbConfig?.GetOpenConnectionAsync();
+    }
 }
