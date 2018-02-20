@@ -89,7 +89,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
         /// <returns>Null if no result.</returns>
         public static async Task<Entry> QueryIdAsync(ulong guild, int id)
         {
-            using (var db = await RegexBot.Config.Database.GetOpenConnectionAsync())
+            using (var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync())
             {
                 using (var c = db.CreateCommand())
                 {
@@ -121,7 +121,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             }
 
             var result = new List<Entry>();
-            using (var db = await RegexBot.Config.Database.GetOpenConnectionAsync())
+            using (var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync())
             {
                 using (var c = db.CreateCommand())
                 {
