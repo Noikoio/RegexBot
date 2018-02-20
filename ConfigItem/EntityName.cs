@@ -3,9 +3,7 @@
     enum EntityType { Channel, Role, User }
     
     /// <summary>
-    /// Used to join together an entity ID and its name, particularly when read from configuration.
-    /// In the event of an unknown ID, the ID is found and cached. The ID should preferably be used
-    /// over the entity's string-based name, as it can change at any time.
+    /// Used to join together an entity ID and its name when read from configuration.
     /// In configuration, entities are fully specified with a prefix (if necessary), an ID, two colons, and a name.
     /// </summary>
     struct EntityName
