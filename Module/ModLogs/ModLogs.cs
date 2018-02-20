@@ -24,7 +24,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             
             _msgCacheInstance = new MessageCache(client, Log, GetConfig);
 
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
         [ConfigSection("ModLogs")]

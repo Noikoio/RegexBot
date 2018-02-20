@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Npgsql;
 using NpgsqlTypes;
 using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModLogs
@@ -32,18 +33,27 @@ namespace Noikoio.RegexBot.Module.ModLogs
         }
 
         #region Event handling
-        private async Task Client_MessageReceived(SocketMessage arg) => await AddOrUpdateCacheItemAsync(arg);
+        private async Task Client_MessageReceived(SocketMessage arg)
+        {
+            if (arg.Author.IsBot) return;
+
+            await AddOrUpdateCacheItemAsync(arg);
+        }
 
         private async Task Client_MessageUpdated(
-            Discord.Cacheable<Discord.IMessage, ulong> before,
-            SocketMessage after, ISocketMessageChannel channel)
+            Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel channel)
         {
-            if (after is SocketUserMessage afterMsg)
+            if (after.Author.IsBot) return;
+
+            // We only want channel messages
+            if (after is SocketUserMessage afterMsg && !(afterMsg is IDMChannel))
             {
+                if (after.Author.IsBot) return;
+
                 // We're not interested in all message updates, only those that leave a timestamp.
                 if (!afterMsg.EditedTimestamp.HasValue) return;
             }
-            else return; // no after???
+            else return; // probably unnecessary?
 
             // Once an edited message is cached, the original message contents are discarded.
             // This is the only time to report it.
@@ -52,27 +62,24 @@ namespace Noikoio.RegexBot.Module.ModLogs
             await AddOrUpdateCacheItemAsync(after);
         }
 
-        private async Task Client_MessageDeleted(
-            Discord.Cacheable<Discord.IMessage, ulong> msg, ISocketMessageChannel channel)
+        private async Task Client_MessageDeleted(Cacheable<Discord.IMessage, ulong> msg, ISocketMessageChannel channel)
         {
             await ProcessReportMessage(true, msg.Id, channel, null);
         }
         #endregion
 
         #region Reporting
-
         // Reports an edited or deleted message as if it were a log entry (even though it's not).
         private async Task ProcessReportMessage(
             bool isDelete, ulong messageId, ISocketMessageChannel ch, string editMsg)
         {
-            var cht = ch as SocketTextChannel;
-            if (cht == null)
+            ulong guildId;
+            if (ch is SocketTextChannel sch)
             {
-                // TODO remove debug print
-                Console.WriteLine("Incoming message not of a text channel");
-                return;
+                if (sch is IDMChannel) return;
+                guildId = sch.Guild.Id;
             }
-            ulong guildId = cht.Guild.Id;
+            else return;
 
             // Check if enabled before doing anything else
             var rptTarget = _outGetConfig(guildId) as ConfigItem.EntityName?;
@@ -127,24 +134,24 @@ namespace Noikoio.RegexBot.Module.ModLogs
             await rptTargetChannel.SendMessageAsync("", embed: em);
         }
 
-        const int ReportCutoffLength = 750;
+        const int ReportCutoffLength = 500;
         const string ReportCutoffNotify = "**Message length too long; showing first {0} characters.**\n\n";
         private EmbedBuilder CreateReportEmbed(
             bool isDelete,
             EntityCache.CacheUser ucd, ulong messageId, ISocketMessageChannel chInfo,
             (string, string) content) // tuple: Item1 = cached content. Item2 = after-edit message
         {
-            string before = content.Item1;
-            string after = content.Item2;
+            string msgCached = content.Item1;
+            string msgPostEdit = content.Item2;
             if (content.Item1.Length > ReportCutoffLength)
             {
-                before = string.Format(ReportCutoffNotify, ReportCutoffLength)
-                    + content.Item1.Substring(ReportCutoffLength);
+                msgCached = string.Format(ReportCutoffNotify, ReportCutoffLength)
+                    + content.Item1.Substring(0, ReportCutoffLength);
             }
-            if (isDelete && content.Item2.Length > ReportCutoffLength)
+            if (!isDelete && content.Item2.Length > ReportCutoffLength)
             {
-                after = string.Format(ReportCutoffNotify, ReportCutoffLength)
-                    + content.Item2.Substring(ReportCutoffLength);
+                msgPostEdit = string.Format(ReportCutoffNotify, ReportCutoffLength)
+                    + content.Item2.Substring(0, ReportCutoffLength);
             }
 
             // Note: Value for ucb is null if cached user could not be determined
@@ -157,45 +164,44 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 Fields = new System.Collections.Generic.List<EmbedFieldBuilder>(),
                 Footer = new EmbedFooterBuilder()
                 {
-                    Text = (ucd == null ? "" : $"UID {ucd.UserId} - ") + $"MID {messageId}",
+                    Text = (ucd == null ? "UID: Unknown" : $"UID: {ucd.UserId}"),
                     IconUrl = _dClient.CurrentUser.GetAvatarUrl()
                 },
-                Timestamp = DateTimeOffset.Now
+                Timestamp = DateTimeOffset.UtcNow
             };
 
             if (isDelete)
             {
+                eb.Author.Name = "Message deleted by ";
                 eb.Color = new Color(0x9b9b9b);
-                eb.Description = content.Item1;
-                eb.Author.Name = "Message deleted by "
-                    + ucd == null ? "unknown user" : $"{ucd.Username}#{ucd.Discriminator}";
+                eb.Description = msgCached;
             }
             else
             {
-                eb.Color = new Color(8615955);
+                eb.Author.Name = "Message edited by ";
+                eb.Color = new Color(0x837813);
                 eb.Fields.Add(new EmbedFieldBuilder()
                 {
                     Name = "Before",
-                    Value = before
+                    Value = msgCached
                 });
                 eb.Fields.Add(new EmbedFieldBuilder()
                 {
                     Name = "After",
-                    Value = after
+                    Value = msgPostEdit
                 });
             }
-            
-            if (ucd != null) eb.Fields.Add(new EmbedFieldBuilder()
-            {
-                Name = "Username",
-                Value = $"<@!{ucd.UserId}>",
-                IsInline = true
-            });
+
+            eb.Author.Name += ucd == null ? "unknown user" : $"{ucd.Username}#{ucd.Discriminator}";
+
+            var context = new StringBuilder();
+            if (ucd != null) context.AppendLine($"Username: <@!{ucd.UserId}>");
+            context.AppendLine($"Channel: <#{chInfo.Id}> #{chInfo.Name}");
+            context.Append($"Message ID: {messageId}");
             eb.Fields.Add(new EmbedFieldBuilder()
             {
-                Name = "Channel",
-                Value = $"<#{chInfo.Id}>\n#{chInfo.Name}",
-                IsInline = true
+                Name = "Context",
+                Value = context.ToString()
             });
 
             return eb;
@@ -233,34 +239,25 @@ namespace Noikoio.RegexBot.Module.ModLogs
             {
                 using (var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync())
                 {
-                    // No upsert. Delete, then add.
-                    using (var t = db.BeginTransaction())
+                    using (var c = db.CreateCommand())
                     {
-                        using (var c = db.CreateCommand())
-                        {
-                            c.CommandText = "DELETE FROM " + TableMessage + " WHERE message_id = @MessageId";
-                            c.Parameters.Add("@MessageId", NpgsqlDbType.Bigint).Value = msg.Id;
-                            c.Prepare();
-                            await c.ExecuteNonQueryAsync();
-                        }
-                        using (var c = db.CreateCommand())
-                        {
-                            c.CommandText = "INSERT INTO " + TableMessage
-                                + " (message_id, author_id, guild_id, channel_id, created_ts, edited_ts, message) VALUES "
-                                + "(@MessageId, @UserId, @GuildId, @ChannelId, @Date, @Edit, @Message)";
-                            c.Parameters.Add("@MessageId", NpgsqlDbType.Bigint).Value = msg.Id;
-                            c.Parameters.Add("@UserId", NpgsqlDbType.Bigint).Value = msg.Author.Id;
-                            c.Parameters.Add("@GuildId", NpgsqlDbType.Bigint).Value = ((SocketGuildUser)msg.Author).Guild.Id;
-                            c.Parameters.Add("@ChannelId", NpgsqlDbType.Bigint).Value = msg.Channel.Id;
-                            c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = msg.Timestamp;
-                            if (msg.EditedTimestamp.HasValue)
-                                c.Parameters.Add("@Edit", NpgsqlDbType.TimestampTZ).Value = msg.EditedTimestamp.Value;
-                            else
-                                c.Parameters.Add("@Edit", NpgsqlDbType.TimestampTZ).Value = DBNull.Value;
-                            c.Parameters.Add("@Message", NpgsqlDbType.Text).Value = msg.Content;
-                            c.Prepare();
-                            await c.ExecuteNonQueryAsync();
-                        }
+                        c.CommandText = "INSERT INTO " + TableMessage
+                            + " (message_id, author_id, guild_id, channel_id, created_ts, edited_ts, message) VALUES"
+                            + " (@MessageId, @UserId, @GuildId, @ChannelId, @Date, @Edit, @Message)"
+                            + " ON CONFLICT (message_id) DO UPDATE"
+                            + " SET message = EXCLUDED.message, edited_ts = EXCLUDED.edited_ts";
+                        c.Parameters.Add("@MessageId", NpgsqlDbType.Bigint).Value = msg.Id;
+                        c.Parameters.Add("@UserId", NpgsqlDbType.Bigint).Value = msg.Author.Id;
+                        c.Parameters.Add("@GuildId", NpgsqlDbType.Bigint).Value = ((SocketGuildUser)msg.Author).Guild.Id;
+                        c.Parameters.Add("@ChannelId", NpgsqlDbType.Bigint).Value = msg.Channel.Id;
+                        c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = msg.Timestamp;
+                        if (msg.EditedTimestamp.HasValue)
+                            c.Parameters.Add("@Edit", NpgsqlDbType.TimestampTZ).Value = msg.EditedTimestamp.Value;
+                        else
+                            c.Parameters.Add("@Edit", NpgsqlDbType.TimestampTZ).Value = DBNull.Value;
+                        c.Parameters.Add("@Message", NpgsqlDbType.Text).Value = msg.Content;
+                        c.Prepare();
+                        await c.ExecuteNonQueryAsync();
                     }
                 }
             }
