@@ -19,6 +19,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
         private readonly AsyncLogger _outLog;
         private readonly Func<ulong, object> _outGetConfig;
 
+        // TODO: How to clear the cache after a time? Can't hold on to this forever.
+
         public MessageCache(DiscordSocketClient client, AsyncLogger logger, Func<ulong, object> getConfFunc)
         {
             _dClient = client;
@@ -55,8 +57,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
             }
             else return; // probably unnecessary?
 
-            // Once an edited message is cached, the original message contents are discarded.
-            // This is the only time to report it.
+            // Once an edited message is cached, the original message contents are lost.
+            // This is the only time available to report it.
             await ProcessReportMessage(false, before.Id, channel, after.Content);
             
             await AddOrUpdateCacheItemAsync(after);
@@ -81,11 +83,14 @@ namespace Noikoio.RegexBot.Module.ModLogs
             }
             else return;
 
-            // Check if enabled before doing anything else
+            // Check if this feature is enabled before doing anything else.
             var rptTarget = _outGetConfig(guildId) as ConfigItem.EntityName?;
             if (!rptTarget.HasValue) return;
 
-            // Regardless of delete or edit, it is necessary to get database information.
+            // Ignore if it's a message being deleted withing the reporting channel.
+            if (isDelete && rptTarget.Value.Id.Value == ch.Id) return;
+
+            // Regardless of delete or edit, it is necessary to get the equivalent database information.
             EntityCache.CacheUser ucd = null;
             ulong userId;
             string cacheMsg;
@@ -123,7 +128,6 @@ namespace Noikoio.RegexBot.Module.ModLogs
             }
 
             // Find target channel, prepare and send out message
-            var em = CreateReportEmbed(isDelete, ucd, messageId, ch, (cacheMsg, editMsg));
             var rptTargetChannel = _dClient.GetGuild(guildId)?.GetTextChannel(rptTarget.Value.Id.Value);
             if (rptTargetChannel == null)
             {
@@ -131,6 +135,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 // TODO make a more descriptive error message
                 return;
             }
+            var em = CreateReportEmbed(isDelete, ucd, messageId, ch, (cacheMsg, editMsg));
             await rptTargetChannel.SendMessageAsync("", embed: em);
         }
 
@@ -139,7 +144,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
         private EmbedBuilder CreateReportEmbed(
             bool isDelete,
             EntityCache.CacheUser ucd, ulong messageId, ISocketMessageChannel chInfo,
-            (string, string) content) // tuple: Item1 = cached content. Item2 = after-edit message
+            (string, string) content) // Item1 = cached content. Item2 = after-edit message (null if isDelete)
         {
             string msgCached = content.Item1;
             string msgPostEdit = content.Item2;
@@ -154,7 +159,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                     + content.Item2.Substring(0, ReportCutoffLength);
             }
 
-            // Note: Value for ucb is null if cached user could not be determined
+            // Note: Value for ucb can be null if cached user could not be determined.
             var eb = new EmbedBuilder
             {
                 Author = new EmbedAuthorBuilder()
@@ -164,7 +169,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 Fields = new System.Collections.Generic.List<EmbedFieldBuilder>(),
                 Footer = new EmbedFooterBuilder()
                 {
-                    Text = (ucd == null ? "UID: Unknown" : $"UID: {ucd.UserId}"),
+                    Text = "User ID: " + ucd?.UserId.ToString() ?? "Unknown",
                     IconUrl = _dClient.CurrentUser.GetAvatarUrl()
                 },
                 Timestamp = DateTimeOffset.UtcNow
@@ -172,14 +177,14 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
             if (isDelete)
             {
-                eb.Author.Name = "Message deleted by ";
-                eb.Color = new Color(0x9b9b9b);
+                eb.Author.Name = "Deleted message by ";
+                eb.Color = new Color(0xff7373);
                 eb.Description = msgCached;
             }
             else
             {
-                eb.Author.Name = "Message edited by ";
-                eb.Color = new Color(0x837813);
+                eb.Author.Name = "Edited message by ";
+                eb.Color = new Color(0xffcc40);
                 eb.Fields.Add(new EmbedFieldBuilder()
                 {
                     Name = "Before",
@@ -206,7 +211,6 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
             return eb;
         }
-
         #endregion
 
         #region Database storage/retrieval
