@@ -20,7 +20,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
         public ModLogs(DiscordSocketClient client) : base(client)
         {
-            if (!RegexBot.Config.DatabaseAvailable) return; // do nothing; warn in ProcessConfiguration
+            // Do nothing if database unavailable. The user will be informed by ProcessConfiguration.
+            if (!RegexBot.Config.DatabaseAvailable) return;
             
             _msgCacheInstance = new MessageCache(client, Log, GetConfig);
 
@@ -36,13 +37,13 @@ namespace Noikoio.RegexBot.Module.ModLogs
             
             if (!RegexBot.Config.DatabaseAvailable)
             {
-                await Log("Database access is not available. This module will not load.");
+                await Log("Database access is not available. This module be unavailable.");
                 return null;
             }
             
             try
             {
-                // MessageCache debug: will store an EntityName or die trying
+                // MessageCache testing: will store an EntityName or die trying
                 EntityName? mctarget = new EntityName(conf["mctarget"].Value<string>(), EntityType.Channel);
                 await Log("Enabled MessageCache test on " + mctarget.Value.ToString());
                 return mctarget;
@@ -52,19 +53,25 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 // well, not really die
                 return null;
             }
-            
 
             /*
-             * Ideas:
-             * -Reporting:
-             * --Reporting channel
-             * --Types to report
-             * ---Ignored if no reporting channel has been set
-             * ---Default to join, quit, kick, ban, ...
-             * ---Any override will disregard defaults
-             * -also how will commands work? how to tie into commands mod?
-             * --modlogs command should also only report a subset of things. custom.
-             * ---ex: don't report nick changes
+             * Concept:
+             *  "ModLogs": {
+             *      "AutoReporting": {
+             *          // behavior for how to output to the reporting channel
+             *          // MessageCache looks for configuration values within here.
+             *          "Channel": "something compatible with EntityName",
+             *          "Events": "perhaps a single string of separated event types"
+             *      },
+             *      "QueryOptions": {
+             *          // Behavior for the query command (which is defined here rather than ModTools)
+             *          // Need to stress in the documentation that "msgedit" and "msgdelete" events
+             *          // are not kept and cannot be queried
+             *          "QueryCommand": "!modlogs",
+             *          "Permission": "Moderators", // either a string that says "Moderators" or an EntityList
+             *          "DefaultQueryEvents": "another single string of separated event types",
+             *      }
+             *  }
              */
         }
     }
