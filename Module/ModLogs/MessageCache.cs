@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 namespace Noikoio.RegexBot.Module.ModLogs
 {
     /// <summary>
-    /// Helper class for <see cref="ModLogs"/>. Keeps a database-backed cache of recent messages and assists
+    /// Helper class for <see cref="ModLogs"/>. Keeps a database-backed cache of recent messages for use
     /// in reporting message changes and deletions, if configured to do so.
-    /// Does not manipulate the moderation log managed by the main class, but rather provides supplemental features.
+    /// Despite its place, it does not manipulate moderation logs. It simply pulls from the same configuration.
     /// </summary>
     class MessageCache
     {
@@ -66,6 +66,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
         private async Task Client_MessageDeleted(Cacheable<Discord.IMessage, ulong> msg, ISocketMessageChannel channel)
         {
+            if (channel is IDMChannel) return; // No DMs
             await ProcessReportMessage(true, msg.Id, channel, null);
         }
         #endregion
@@ -84,11 +85,13 @@ namespace Noikoio.RegexBot.Module.ModLogs
             else return;
 
             // Check if this feature is enabled before doing anything else.
-            var rptTarget = _outGetConfig(guildId) as ConfigItem.EntityName?;
-            if (!rptTarget.HasValue) return;
+            var cfg = _outGetConfig(guildId) as GuildConfig;
+            if (cfg == null) return;
+            if (isDelete && (cfg.RptTypes & EventType.MsgDelete) == 0) return;
+            if (!isDelete && (cfg.RptTypes & EventType.MsgEdit) == 0) return;
 
             // Ignore if it's a message being deleted withing the reporting channel.
-            if (isDelete && rptTarget.Value.Id.Value == ch.Id) return;
+            if (isDelete && cfg.RptTarget.Value.Id.Value == ch.Id) return;
 
             // Regardless of delete or edit, it is necessary to get the equivalent database information.
             EntityCache.CacheUser ucd = null;
@@ -128,11 +131,11 @@ namespace Noikoio.RegexBot.Module.ModLogs
             }
 
             // Find target channel, prepare and send out message
-            var rptTargetChannel = _dClient.GetGuild(guildId)?.GetTextChannel(rptTarget.Value.Id.Value);
+            var g = _dClient.GetGuild(guildId);
+            var rptTargetChannel = g?.GetTextChannel(cfg.RptTarget.Value.Id.Value);
             if (rptTargetChannel == null)
             {
-                await _outLog("Target channel not found.");
-                // TODO make a more descriptive error message
+                await _outLog($"WARNING: Reporting channel {cfg.RptTarget.Value.ToString()} could not be determined.");
                 return;
             }
             var em = CreateReportEmbed(isDelete, ucd, messageId, ch, (cacheMsg, editMsg));
