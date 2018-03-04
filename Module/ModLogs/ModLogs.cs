@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
+using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModLogs
 {
@@ -42,7 +39,11 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 return null;
             }
 
-            return new GuildConfig((JObject)configSection);
+            var conf = new GuildConfig((JObject)configSection);
+            if (conf.RptTypes != EventType.None)
+                await Log("Enabled event autoreporting to " + conf.RptTarget);
+
+            return conf;
         }
     }
 }
