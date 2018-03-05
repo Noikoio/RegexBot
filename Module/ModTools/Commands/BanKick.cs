@@ -99,7 +99,17 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             Match m = UserMention.Match(targetstr);
             if (m.Success) targetstr = m.Groups["snowflake"].Value;
 
-            var qres = (await EntityCache.EntityCache.QueryAsync(g.Id, targetstr)).FirstOrDefault();
+            EntityCache.CacheUser qres;
+            try
+            {
+                qres = (await EntityCache.EntityCache.QueryAsync(g.Id, targetstr)).FirstOrDefault();
+            }
+            catch (Npgsql.NpgsqlException ex)
+            {
+                await Log("A database error occurred during user lookup: " + ex.Message);
+                await msg.Channel.SendMessageAsync(FailPrefix + FailDefault);
+                return;
+            }
             if (qres == null)
             {
                 await SendUsageMessage(msg, TargetNotFound);
