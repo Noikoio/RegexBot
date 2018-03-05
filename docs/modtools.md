@@ -47,7 +47,7 @@ Additional behavior can be specified in its configuration:
 #### Kick
 * `"type": "kick"`
 * Usage: (*command*) (*user name or ID*) [*reason*]
-Removes the given user from the server the command was invoked in, and sends the reason, if any, to the server's audit log.
+Removes the given user from the server the command was invoked in and sends the reason, if any, to the server's audit log.
 
 Additional behavior can be specified in its configuration:
 * forcereason (*boolean*) - Forces the reason to be specified if set to true. If none is specified, the action is not taken. Defaults to *false*.
@@ -62,3 +62,8 @@ Additional behavior can be specified in its configuration:
 * `"type": "say"`
 * Usage: (*command*) (*channel name or ID*) (*message*)
 Causes the bot to send the given message exactly as specified to the given channel.
+
+#### Configuration Reload
+* `"type": "confreload"`
+* Usage: (*command*)
+Reloads server configuration. The bot will reply indicating if the reload was successful.
