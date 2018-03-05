@@ -7,7 +7,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
     class ConfReload : CommandBase
     {
         // No configuration.
-        protected ConfReload(ModTools l, string label, JObject conf) : base(l, label, conf) { }
+        public ConfReload(ModTools l, string label, JObject conf) : base(l, label, conf) { }
 
         // Usage: (command)
         public override async Task Invoke(SocketGuild g, SocketMessage msg)

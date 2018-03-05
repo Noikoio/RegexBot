@@ -59,7 +59,7 @@ namespace Noikoio.RegexBot.Module.ModTools
             if (string.IsNullOrWhiteSpace(label)) throw new RuleImportException("Label cannot be blank.");
 
             var definition = (JObject)def.Value;
-            string cmdinvoke = definition["command"].Value<string>();
+            string cmdinvoke = definition["command"]?.Value<string>();
             if (string.IsNullOrWhiteSpace(cmdinvoke))
                 throw new RuleImportException($"{label}: 'command' value was not specified.");
             if (cmdinvoke.Contains(" "))
