@@ -8,10 +8,10 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 {
     class Say : CommandBase
     {
-        public Say(ModTools l, string label, JObject conf) : base(l, label, conf) { }
-
+        // No configuration at the moment.
         // TODO: Whitelist/blacklist - to limit which channels it can "say" into
-
+        public Say(ModTools l, string label, JObject conf) : base(l, label, conf) { }
+        
         public override async Task Invoke(SocketGuild g, SocketMessage msg)
         {
             string[] line = msg.Content.Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
