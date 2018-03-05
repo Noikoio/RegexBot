@@ -47,6 +47,7 @@ namespace Noikoio.RegexBot.Module.ModTools
             {
                 // Define all command types and their corresponding Types here
                 { "ban",        typeof(Commands.Ban) },
+                { "confreload", typeof(Commands.ConfReload) },
                 { "kick",       typeof(Commands.Kick) },
                 { "say",        typeof(Commands.Say) },
                 { "unban",      typeof(Commands.Unban) }
