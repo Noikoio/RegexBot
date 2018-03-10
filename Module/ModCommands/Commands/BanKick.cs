@@ -1,5 +1,4 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
@@ -9,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModCommands.Commands
 {
+    // Ban and kick commands are highly similar in implementation, and thus are handled in a single class.
     class BanKick : Command
     {
-        // Ban and kick commands are highly similar in implementation, and thus are handled in a single class.
         protected enum CommandMode { Ban, Kick }
         private readonly CommandMode _mode;
 
@@ -49,6 +48,13 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 if (string.IsNullOrWhiteSpace(val)) _notifyMsg = null; // empty value - disable message
                 else _notifyMsg = val;
             }
+
+            // Building usage message here
+            DefaultUsageMsg = $"{this.Trigger} [user or user ID] " + (_forceReason ? "[reason]" : "*[reason]*") + "\n"
+                + "Removes the given user from this server and prevents the user from rejoining. "
+                + (_forceReason ? "L" : "Optionally l") + "ogs the reason for the ban to the Audit Log.";
+            if (_purgeDays > 0)
+                DefaultUsageMsg += $"\nAdditionally removes the user's post history for the last {_purgeDays} day(s).";
         }
 
         #region Strings
@@ -71,7 +77,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
             string reason;
             if (line.Length < 2)
             {
-                await SendUsageMessage(msg, null);
+                await SendUsageMessageAsync(msg.Channel, null);
                 return;
             }
             targetstr = line[1];
@@ -86,7 +92,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 // No reason given
                 if (_forceReason)
                 {
-                    await SendUsageMessage(msg, ReasonRequired);
+                    await SendUsageMessageAsync(msg.Channel, ReasonRequired);
                     return;
                 }
                 reason = null;
@@ -112,7 +118,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
             }
             if (qres == null)
             {
-                await SendUsageMessage(msg, TargetNotFound);
+                await SendUsageMessageAsync(msg.Channel, TargetNotFound);
                 return;
             }
             ulong targetuid = qres.UserId;
@@ -122,7 +128,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
             if (_mode == CommandMode.Kick && targetobj == null)
             {
                 // Can't kick without obtaining the user object
-                await SendUsageMessage(msg, TargetNotFound);
+                await SendUsageMessageAsync(msg.Channel, TargetNotFound);
                 return;
             }
 
@@ -186,22 +192,6 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 return false;
             }
             return true;
-        }
-
-        private async Task SendUsageMessage(SocketMessage m, string message)
-        {
-            string desc = $"{this.Trigger} [user or user ID] " + (_forceReason ? "[reason]" : "*[reason]*") + "\n";
-            desc += "Removes the given user from this server and prevents the user from rejoining. ";
-            desc += (_forceReason ? "L" : "Optionally l") + "ogs the reason for the ban to the Audit Log.";
-            if (_purgeDays > 0)
-                desc += $"\nAdditionally removes the user's post history for the last {_purgeDays} day(s).";
-
-            var usageEmbed = new EmbedBuilder()
-            {
-                Title = "Usage",
-                Description = desc
-            };
-            await m.Channel.SendMessageAsync(message ?? "", embed: usageEmbed);
         }
 
         private string BuildSuccessMessage(string targetstr)

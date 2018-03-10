@@ -1,4 +1,5 @@
-﻿using Discord.WebSocket;
+﻿using Discord;
+using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
@@ -94,6 +95,28 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
         protected static readonly Regex RoleMention = new Regex(@"<@&(?<snowflake>\d+)>", RegexOptions.Compiled);
         protected static readonly Regex ChannelMention = new Regex(@"<#(?<snowflake>\d+)>", RegexOptions.Compiled);
         protected static readonly Regex EmojiMatch = new Regex(@"<:(?<name>[A-Za-z0-9_]{2,}):(?<ID>\d+)>", RegexOptions.Compiled);
+        #endregion
+
+        #region Usage message
+        protected string DefaultUsageMsg { get; set; }
+        /// <summary>
+        /// Sends out the default usage message (<see cref="DefaultUsageMsg"/>) within an embed. 
+        /// An optional message can be included, for uses such as notifying users of incorrect usage.
+        /// </summary>
+        /// <param name="target">Target channel for sending the message.</param>
+        /// <param name="message">The message to send alongside the default usage message.</param>
+        protected async Task SendUsageMessageAsync(ISocketMessageChannel target, string message = null)
+        {
+            if (DefaultUsageMsg == null)
+                throw new InvalidOperationException("DefaultUsage was not defined.");
+
+            var usageEmbed = new EmbedBuilder()
+            {
+                Title = "Usage",
+                Description = DefaultUsageMsg
+            };
+            await target.SendMessageAsync(message ?? "", embed: usageEmbed);
+        }
         #endregion
     }
 }

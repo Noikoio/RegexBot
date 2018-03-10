@@ -1,5 +1,4 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Linq;
@@ -13,7 +12,10 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
         // No configuration.
         // TODO bring in some options from BanKick. Particularly custom success msg.
         // TODO when ModLogs fully implemented, add a reason?
-        public Unban(CommandListener l, string label, JObject conf) : base(l, label, conf) { }
+        public Unban(CommandListener l, string label, JObject conf) : base(l, label, conf) {
+            DefaultUsageMsg = $"{this.Trigger} [user or user ID]\n"
+                + "Unbans the given user, allowing them to rejoin the server.";
+        }
 
         #region Strings
         const string FailPrefix = ":x: **Unable to unban:** ";
@@ -33,7 +35,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
             string targetstr;
             if (line.Length < 2)
             {
-                await SendUsageMessage(msg, null);
+                await SendUsageMessageAsync(msg.Channel, null);
                 return;
             }
             targetstr = line[1];
@@ -59,7 +61,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
             
             if (qres == null)
             {
-                await SendUsageMessage(msg, TargetNotFound);
+                await SendUsageMessageAsync(msg.Channel, TargetNotFound);
                 return;
             }
 
@@ -89,19 +91,6 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                     await Log(ex.ToString());
                 }
             }
-        }
-
-        private async Task SendUsageMessage(SocketMessage m, string message)
-        {
-            string desc = $"{this.Trigger} [user or user ID]\n";
-            desc += "Unbans the given user, allowing them to rejoin the server.";
-
-            var usageEmbed = new EmbedBuilder()
-            {
-                Title = "Usage",
-                Description = desc
-            };
-            await m.Channel.SendMessageAsync(message ?? "", embed: usageEmbed);
         }
     }
 }
