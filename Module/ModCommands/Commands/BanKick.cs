@@ -7,9 +7,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.ModTools.Commands
+namespace Noikoio.RegexBot.Module.ModCommands.Commands
 {
-    class BanKick : CommandBase
+    class BanKick : Command
     {
         // Ban and kick commands are highly similar in implementation, and thus are handled in a single class.
         protected enum CommandMode { Ban, Kick }
@@ -28,7 +28,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
         // "notifymsg" - Message to send to the target user being acted upon. Default message is used
         //               if the value is not specified. If a blank value is given, the feature is disabled.
         //               Takes the special values $s for server name and $r for reason text.
-        protected BanKick(ModTools l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
+        protected BanKick(CommandListener l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
         {
             _mode = mode;
             _forceReason = conf["forcereason"]?.Value<bool>() ?? false;
@@ -190,7 +190,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 
         private async Task SendUsageMessage(SocketMessage m, string message)
         {
-            string desc = $"{this.Command} [user or user ID] " + (_forceReason ? "[reason]" : "*[reason]*") + "\n";
+            string desc = $"{this.Trigger} [user or user ID] " + (_forceReason ? "[reason]" : "*[reason]*") + "\n";
             desc += "Removes the given user from this server and prevents the user from rejoining. ";
             desc += (_forceReason ? "L" : "Optionally l") + "ogs the reason for the ban to the Audit Log.";
             if (_purgeDays > 0)
@@ -217,13 +217,13 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 
     class Ban : BanKick
     {
-        public Ban(ModTools l, string label, JObject conf)
+        public Ban(CommandListener l, string label, JObject conf)
             : base(l, label, conf, CommandMode.Ban) { }
     }
 
     class Kick : BanKick
     {
-        public Kick(ModTools l, string label, JObject conf)
+        public Kick(CommandListener l, string label, JObject conf)
             : base(l, label, conf, CommandMode.Kick) { }
     }
 }

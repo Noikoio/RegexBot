@@ -1,21 +1,22 @@
 ﻿using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
+using Noikoio.RegexBot.Module.ModCommands.Commands;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Noikoio.RegexBot.Module.ModTools
+namespace Noikoio.RegexBot.Module.ModCommands
 {
     /// <summary>
     /// Represents ModTools configuration within one server.
     /// </summary>
     class ConfigItem
     {
-        private readonly ReadOnlyDictionary<string, CommandBase> _cmdInstances;
+        private readonly ReadOnlyDictionary<string, Command> _cmdInstances;
         
-        public ReadOnlyDictionary<string, CommandBase> Commands => _cmdInstances;
+        public ReadOnlyDictionary<string, Command> Commands => _cmdInstances;
 
-        public ConfigItem(ModTools instance, JToken inconf)
+        public ConfigItem(CommandListener instance, JToken inconf)
         {
             if (inconf.Type != JTokenType.Object)
             {
@@ -23,9 +24,8 @@ namespace Noikoio.RegexBot.Module.ModTools
             }
             var config = (JObject)inconf;
             
-
-            // Command instances
-            var commands = new Dictionary<string, CommandBase>(StringComparer.OrdinalIgnoreCase);
+            // Command instance creation
+            var commands = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
             var commandconf = config["Commands"];
             if (commandconf != null)
             {
@@ -37,16 +37,16 @@ namespace Noikoio.RegexBot.Module.ModTools
                 foreach (var def in commandconf.Children<JProperty>())
                 {
                     string label = def.Name;
-                    var cmd = CommandBase.CreateInstance(instance, def);
-                    if (commands.ContainsKey(cmd.Command))
+                    var cmd = Command.CreateInstance(instance, def);
+                    if (commands.ContainsKey(cmd.Trigger))
                         throw new RuleImportException(
                             $"{label}: 'command' value must not be equal to that of another definition. " +
-                            $"Given value is being used for {commands[cmd.Command].Label}.");
+                            $"Given value is being used for \"{commands[cmd.Trigger].Label}\".");
 
-                    commands.Add(cmd.Command, cmd);
+                    commands.Add(cmd.Trigger, cmd);
                 }
             }
-            _cmdInstances = new ReadOnlyDictionary<string, CommandBase>(commands);
+            _cmdInstances = new ReadOnlyDictionary<string, Command>(commands);
         }
     }
 }

@@ -4,13 +4,13 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.ModTools.Commands
+namespace Noikoio.RegexBot.Module.ModCommands.Commands
 {
-    class Say : CommandBase
+    class Say : Command
     {
         // No configuration at the moment.
         // TODO: Whitelist/blacklist - to limit which channels it can "say" into
-        public Say(ModTools l, string label, JObject conf) : base(l, label, conf) { }
+        public Say(CommandListener l, string label, JObject conf) : base(l, label, conf) { }
         
         public override async Task Invoke(SocketGuild g, SocketMessage msg)
         {
@@ -33,7 +33,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 
         private async Task SendUsageMessage(SocketMessage m, string message)
         {
-            string desc = $"{this.Command} [channel] [message]\n";
+            string desc = $"{this.Trigger} [channel] [message]\n";
             desc += "Displays the given message exactly as specified to the given channel.";
 
             var usageEmbed = new EmbedBuilder()

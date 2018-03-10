@@ -6,30 +6,35 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.ModTools
+namespace Noikoio.RegexBot.Module.ModCommands
 {
     /// <summary>
-    /// ModTools module.
     /// This class manages reading configuration and creating instances based on it.
+    /// It processes input and looks for messages that intend to invoke commands defined in configuration.
     /// </summary>
-    class ModTools : BotModule
+    /// <remarks>
+    /// Discord.Net has its own recommended way of implementing commands, but it's not exactly
+    /// done in a way that would easily allow for flexibility and modifications during runtime.
+    /// Thus, reinventing the wheel right here.
+    /// </remarks>
+    class CommandListener : BotModule
     {
-        public override string Name => "ModTools";
+        public override string Name => "ModCommands";
         
-        public ModTools(DiscordSocketClient client) : base(client)
+        public CommandListener(DiscordSocketClient client) : base(client)
         {
             client.MessageReceived += Client_MessageReceived;
         }
 
         private async Task Client_MessageReceived(SocketMessage arg)
         {
-            // Always ignore bots
-            if (arg.Author.IsBot) return;
+            // Always ignore these
+            if (arg.Author.IsBot || arg.Author.IsWebhook) return;
 
             if (arg.Channel is IGuildChannel) await CommandCheckInvoke(arg);
         }
         
-        [ConfigSection("ModTools")]
+        [ConfigSection("ModCommands")]
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
             // Constructor throws exception on config errors
@@ -69,12 +74,13 @@ namespace Noikoio.RegexBot.Module.ModTools
             {
                 try
                 {
-                    await Log($"'{c.Label}' invoked by {arg.Author.ToString()} in {g.Name}/#{arg.Channel.Name}");
                     await c.Invoke(g, arg);
+                    // TODO Custom invocation log messages? Not by the user, but by the command.
+                    await Log($"{g.Name}/#{arg.Channel.Name}: {arg.Author} invoked {arg.Content}");
                 }
                 catch (Exception ex)
                 {
-                    await Log($"Encountered an error for the command '{c.Label}'. Details follow:");
+                    await Log($"Encountered an unhandled exception while processing '{c.Label}'. Details follow:");
                     await Log(ex.ToString());
                 }
             }

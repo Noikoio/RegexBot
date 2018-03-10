@@ -2,12 +2,12 @@
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.ModTools.Commands
+namespace Noikoio.RegexBot.Module.ModCommands.Commands
 {
-    class ConfReload : CommandBase
+    class ConfReload : Command
     {
         // No configuration.
-        public ConfReload(ModTools l, string label, JObject conf) : base(l, label, conf) { }
+        public ConfReload(CommandListener l, string label, JObject conf) : base(l, label, conf) { }
 
         // Usage: (command)
         public override async Task Invoke(SocketGuild g, SocketMessage msg)

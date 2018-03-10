@@ -6,14 +6,14 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.ModTools.Commands
+namespace Noikoio.RegexBot.Module.ModCommands.Commands
 {
-    class Unban : CommandBase
+    class Unban : Command
     {
         // No configuration.
         // TODO bring in some options from BanKick. Particularly custom success msg.
         // TODO when ModLogs fully implemented, add a reason?
-        public Unban(ModTools l, string label, JObject conf) : base(l, label, conf) { }
+        public Unban(CommandListener l, string label, JObject conf) : base(l, label, conf) { }
 
         #region Strings
         const string FailPrefix = ":x: **Unable to unban:** ";
@@ -93,7 +93,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 
         private async Task SendUsageMessage(SocketMessage m, string message)
         {
-            string desc = $"{this.Command} [user or user ID]\n";
+            string desc = $"{this.Trigger} [user or user ID]\n";
             desc += "Unbans the given user, allowing them to rejoin the server.";
 
             var usageEmbed = new EmbedBuilder()

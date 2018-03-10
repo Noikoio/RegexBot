@@ -9,24 +9,25 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.ModTools
+namespace Noikoio.RegexBot.Module.ModCommands.Commands
 {
     /// <summary>
-    /// Base class for ModTools command.
-    /// We are not using Discord.Net's Commands extension, as it does not allow for changes during runtime.
+    /// Base class for a command within the module.
+    /// After implementing, don't forget to add a reference to
+    /// <see cref="CreateInstance(CommandListener, JProperty)"/>.
     /// </summary>
-    [DebuggerDisplay("{Label}-type command")]
-    abstract class CommandBase
+    [DebuggerDisplay("Command def: {Label}")]
+    abstract class Command
     {
-        private readonly ModTools _modtools;
+        private readonly CommandListener _modtools;
         private readonly string _label;
         private readonly string _command;
 
-        protected ModTools Mt => _modtools;
+        protected CommandListener Module => _modtools;
         public string Label => _label;
-        public string Command => _command;
+        public string Trigger => _command;
 
-        protected CommandBase(ModTools l, string label, JObject conf)
+        public Command(CommandListener l, string label, JObject conf)
         {
             _modtools = l;
             _label = label;
@@ -46,14 +47,14 @@ namespace Noikoio.RegexBot.Module.ModTools
             new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
             {
                 // Define all command types and their corresponding Types here
-                { "ban",        typeof(Commands.Ban) },
-                { "confreload", typeof(Commands.ConfReload) },
-                { "kick",       typeof(Commands.Kick) },
-                { "say",        typeof(Commands.Say) },
-                { "unban",      typeof(Commands.Unban) }
+                { "ban",        typeof(Ban) },
+                { "confreload", typeof(ConfReload) },
+                { "kick",       typeof(Kick) },
+                { "say",        typeof(Say) },
+                { "unban",      typeof(Unban) }
             });
 
-        public static CommandBase CreateInstance(ModTools root, JProperty def)
+        public static Command CreateInstance(CommandListener root, JProperty def)
         {
             string label = def.Name;
             if (string.IsNullOrWhiteSpace(label)) throw new RuleImportException("Label cannot be blank.");
@@ -68,24 +69,27 @@ namespace Noikoio.RegexBot.Module.ModTools
             string ctypestr = definition["type"]?.Value<string>();
             if (string.IsNullOrWhiteSpace(ctypestr))
                 throw new RuleImportException($"Value 'type' must be specified in definition for '{label}'.");
-            Type ctype;
-            if (!_commands.TryGetValue(ctypestr, out ctype))
-                throw new RuleImportException($"The given 'type' value is invalid in definition for '{label}'.");
-            
-            try
+            if (_commands.TryGetValue(ctypestr, out Type ctype))
             {
-                return (CommandBase)Activator.CreateInstance(ctype, root, label, definition);
+                try
+                {
+                    return (Command)Activator.CreateInstance(ctype, root, label, definition);
+                }
+                catch (TargetInvocationException ex)
+                {
+                    if (ex.InnerException is RuleImportException)
+                        throw new RuleImportException($"Error in configuration for command '{label}': {ex.InnerException.Message}");
+                    else throw;
+                }
             }
-            catch (TargetInvocationException ex)
+            else
             {
-                if (ex.InnerException is RuleImportException)
-                    throw new RuleImportException($"Error in configuration for command '{label}': {ex.InnerException.Message}");
-                else throw;
+                throw new RuleImportException($"The given 'type' value is invalid in definition for '{label}'.");
             }
         }
         #endregion
 
-        #region Helper methods and values
+        #region Helper methods and common values
         protected static readonly Regex UserMention = new Regex(@"<@!?(?<snowflake>\d+)>", RegexOptions.Compiled);
         protected static readonly Regex RoleMention = new Regex(@"<@&(?<snowflake>\d+)>", RegexOptions.Compiled);
         protected static readonly Regex ChannelMention = new Regex(@"<#(?<snowflake>\d+)>", RegexOptions.Compiled);
