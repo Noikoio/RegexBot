@@ -19,9 +19,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 
         #region Strings
         const string FailPrefix = ":x: **Unable to unban:** ";
-        const string Fail403 = "I do not have the required permissions to perform that action.";
-        const string Fail404 = "The target user is no longer available.";
-        const string FailDefault = "An unknown error occurred. Notify the bot operator.";
+        protected const string Fail404 = "The specified user does not exist or is not in the ban list.";
         const string TargetNotFound = ":x: **Unable to determine the target user.**";
         const string Success = ":white_check_mark: Unbanned user **{0}**.";
         #endregion
@@ -29,8 +27,6 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
         // Usage: (command) (user query)
         public override async Task Invoke(SocketGuild g, SocketMessage msg)
         {
-            // TODO oh god there's so much boilerplate copypasted from BanKick make it stop
-
             string[] line = msg.Content.Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
             string targetstr;
             if (line.Length < 2)
@@ -40,39 +36,29 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
             }
             targetstr = line[1];
 
-            // Getting SocketGuildUser target
-            SocketGuildUser targetobj = null;
-
-            // Extract snowflake value from mention (if a mention was given)
-            Match m = UserMention.Match(targetstr);
-            if (m.Success) targetstr = m.Groups["snowflake"].Value;
-
-            EntityCache.CacheUser qres;
-            try
+            // Retrieve target user
+            var (targetId, targetData) = await GetUserDataFromString(g.Id, targetstr);
+            if (targetId == 1)
             {
-                qres = (await EntityCache.EntityCache.QueryAsync(g.Id, targetstr)).FirstOrDefault();
-            }
-            catch (Npgsql.NpgsqlException ex)
-            {
-                await Log("A database error occurred during user lookup: " + ex.Message);
                 await msg.Channel.SendMessageAsync(FailPrefix + FailDefault);
                 return;
             }
-            
-            if (qres == null)
+            if (targetId == 0)
             {
                 await SendUsageMessageAsync(msg.Channel, TargetNotFound);
                 return;
             }
 
-            ulong targetuid = qres.UserId;
-            targetobj = g.GetUser(targetuid);
-            string targetdisp = targetobj?.ToString() ?? $"ID {targetuid}";
+            string targetdisp;
+            if (targetData != null)
+                targetdisp = $"{targetData.Username}#{targetData.Discriminator}";
+            else
+                targetdisp = $"ID {targetId}";
 
             // Do the action
             try
             {
-                await g.RemoveBanAsync(targetuid);
+                await g.RemoveBanAsync(targetId);
                 await msg.Channel.SendMessageAsync(string.Format(Success, targetdisp));
             }
             catch (Discord.Net.HttpException ex)

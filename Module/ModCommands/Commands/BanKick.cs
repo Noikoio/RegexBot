@@ -59,9 +59,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 
         #region Strings
         const string FailPrefix = ":x: **Failed to {0} user:** ";
-        const string Fail403 = "I do not have the required permissions to perform that action.";
-        const string Fail404 = "The target user is no longer available.";
-        const string FailDefault = "An unknown error occurred. Notify the bot operator.";
+        const string Fail404 = "The specified user is no longer in the server.";
         const string NotifyDefault = "You have been {0} from $s for the following reason:\n$r";
         const string NotifyReasonNone = "No reason specified.";
         const string NotifyFailed = "\n(User was unable to receive notification message.)";
@@ -98,32 +96,25 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 reason = null;
             }
 
-            // Getting SocketGuildUser target
-            SocketGuildUser targetobj = null;
-
-            // Extract snowflake value from mention (if a mention was given)
-            Match m = UserMention.Match(targetstr);
-            if (m.Success) targetstr = m.Groups["snowflake"].Value;
-
-            EntityCache.CacheUser qres;
-            try
+            // Retrieve target user
+            var (targetId, targetData) = await GetUserDataFromString(g.Id, targetstr);
+            if (targetId == 1)
             {
-                qres = (await EntityCache.EntityCache.QueryAsync(g.Id, targetstr)).FirstOrDefault();
-            }
-            catch (Npgsql.NpgsqlException ex)
-            {
-                await Log("A database error occurred during user lookup: " + ex.Message);
                 await msg.Channel.SendMessageAsync(FailPrefix + FailDefault);
                 return;
             }
-            if (qres == null)
+            if (targetId == 0)
             {
                 await SendUsageMessageAsync(msg.Channel, TargetNotFound);
                 return;
             }
-            ulong targetuid = qres.UserId;
-            targetobj = g.GetUser(targetuid);
-            string targetdisp = targetobj?.ToString() ?? $"ID {targetuid}";
+
+            SocketGuildUser targetobj = g.GetUser(targetId);
+            string targetdisp;
+            if (targetData != null)
+                targetdisp = $"{targetData.Username}#{targetData.Discriminator}";
+            else
+                targetdisp = $"ID {targetId}";
 
             if (_mode == CommandMode.Kick && targetobj == null)
             {
@@ -143,7 +134,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 reasonlog = Uri.EscapeDataString(reasonlog);
 #warning Remove EscapeDataString call on next Discord.Net update
 #if !DEBUG
-                if (_mode == CommandMode.Ban) await g.AddBanAsync(targetuid, _purgeDays, reasonlog);
+                if (_mode == CommandMode.Ban) await g.AddBanAsync(targetId, _purgeDays, reasonlog);
                 else await targetobj.KickAsync(reason);
 #else
 #warning "Actual kick/ban action is DISABLED during debug."

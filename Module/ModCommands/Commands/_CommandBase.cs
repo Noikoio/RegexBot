@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -95,9 +96,9 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
         protected static readonly Regex RoleMention = new Regex(@"<@&(?<snowflake>\d+)>", RegexOptions.Compiled);
         protected static readonly Regex ChannelMention = new Regex(@"<#(?<snowflake>\d+)>", RegexOptions.Compiled);
         protected static readonly Regex EmojiMatch = new Regex(@"<:(?<name>[A-Za-z0-9_]{2,}):(?<ID>\d+)>", RegexOptions.Compiled);
-        #endregion
+        protected const string Fail403 = "I do not have the required permissions to perform that action.";
+        protected const string FailDefault = "An unknown error occurred. Notify the bot operator.";
 
-        #region Usage message
         protected string DefaultUsageMsg { get; set; }
         /// <summary>
         /// Sends out the default usage message (<see cref="DefaultUsageMsg"/>) within an embed. 
@@ -116,6 +117,40 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 Description = DefaultUsageMsg
             };
             await target.SendMessageAsync(message ?? "", embed: usageEmbed);
+        }
+
+        /// <summary>
+        /// Helper method for turning input into user data. Only returns the first cache result.
+        /// </summary>
+        /// <returns>
+        /// First value: 0 for no data, 1 for no data + exception.
+        /// May return a partial result: a valid ulong value but no CacheUser.
+        /// </returns>
+        protected async Task<(ulong, EntityCache.CacheUser)> GetUserDataFromString(ulong guild, string input)
+        {
+            ulong uid = 0;
+            EntityCache.CacheUser cdata = null;
+
+            Match m = UserMention.Match(input);
+            if (m.Success)
+            {
+                input = m.Groups["snowflake"].Value;
+                uid = ulong.Parse(input);
+            }
+
+            try
+            {
+                cdata = (await EntityCache.EntityCache.QueryAsync(guild, input))
+                    .FirstOrDefault();
+                if (cdata != null) uid = cdata.UserId;
+            }
+            catch (Npgsql.NpgsqlException ex)
+            {
+                await Log("A databasae error occurred during user lookup: " + ex.Message);
+                if (uid == 0) uid = 1;
+            }
+
+            return (uid, cdata);
         }
         #endregion
     }
