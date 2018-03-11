@@ -2,8 +2,6 @@
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModCommands.Commands
