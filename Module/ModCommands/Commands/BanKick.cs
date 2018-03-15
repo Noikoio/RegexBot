@@ -49,8 +49,10 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 
             // Building usage message here
             DefaultUsageMsg = $"{this.Trigger} [user or user ID] " + (_forceReason ? "[reason]" : "*[reason]*") + "\n"
-                + "Removes the given user from this server and prevents the user from rejoining. "
-                + (_forceReason ? "L" : "Optionally l") + "ogs the reason for the ban to the Audit Log.";
+                + "Removes the given user from this server"
+                + (_mode == CommandMode.Ban ? " and prevents the user from rejoining" : "") + ". "
+                + (_forceReason ? "L" : "Optionally l") + "ogs the reason for the "
+                + (_mode == CommandMode.Ban ? "ban" : "kick") + " to the Audit Log.";
             if (_purgeDays > 0)
                 DefaultUsageMsg += $"\nAdditionally removes the user's post history for the last {_purgeDays} day(s).";
         }
