@@ -132,6 +132,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 string reasonlog = $"Invoked by {msg.Author.ToString()}.";
                 if (reason != null) reasonlog += $" Reason: {reason}";
                 reasonlog = Uri.EscapeDataString(reasonlog);
+                await notifyTask;
 #warning Remove EscapeDataString call on next Discord.Net update
 #if !DEBUG
                 if (_mode == CommandMode.Ban) await g.AddBanAsync(targetId, _purgeDays, reasonlog);
@@ -140,7 +141,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 #warning "Actual kick/ban action is DISABLED during debug."
 #endif
                 string resultmsg = BuildSuccessMessage(targetdisp);
-                if (await notifyTask == false) resultmsg += NotifyFailed;
+                if (notifyTask.Result == false) resultmsg += NotifyFailed;
                 await msg.Channel.SendMessageAsync(resultmsg);
             }
             catch (Discord.Net.HttpException ex)
