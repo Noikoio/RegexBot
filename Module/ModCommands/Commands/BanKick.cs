@@ -136,7 +136,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 #warning Remove EscapeDataString call on next Discord.Net update
 #if !DEBUG
                 if (_mode == CommandMode.Ban) await g.AddBanAsync(targetId, _purgeDays, reasonlog);
-                else await targetobj.KickAsync(reason);
+                else await targetobj.KickAsync(reasonlog);
 #else
 #warning "Actual kick/ban action is DISABLED during debug."
 #endif
