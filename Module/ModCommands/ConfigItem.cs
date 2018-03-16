@@ -22,29 +22,19 @@ namespace Noikoio.RegexBot.Module.ModCommands
             {
                 throw new RuleImportException("Configuration for this section is invalid.");
             }
-            var config = (JObject)inconf;
             
             // Command instance creation
             var commands = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
-            var commandconf = config["Commands"];
-            if (commandconf != null)
+            foreach (var def in inconf.Children<JProperty>())
             {
-                if (commandconf.Type != JTokenType.Object)
-                {
-                    throw new RuleImportException("CommandDefs is not properly defined.");
-                }
+                string label = def.Name;
+                var cmd = Command.CreateInstance(instance, def);
+                if (commands.ContainsKey(cmd.Trigger))
+                    throw new RuleImportException(
+                        $"{label}: 'command' value must not be equal to that of another definition. " +
+                        $"Given value is being used for \"{commands[cmd.Trigger].Label}\".");
 
-                foreach (var def in commandconf.Children<JProperty>())
-                {
-                    string label = def.Name;
-                    var cmd = Command.CreateInstance(instance, def);
-                    if (commands.ContainsKey(cmd.Trigger))
-                        throw new RuleImportException(
-                            $"{label}: 'command' value must not be equal to that of another definition. " +
-                            $"Given value is being used for \"{commands[cmd.Trigger].Label}\".");
-
-                    commands.Add(cmd.Trigger, cmd);
-                }
+                commands.Add(cmd.Trigger, cmd);
             }
             _cmdInstances = new ReadOnlyDictionary<string, Command>(commands);
         }

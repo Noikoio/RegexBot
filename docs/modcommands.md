@@ -5,22 +5,20 @@ ModCommands is the name of the component that provides the ability for one to cr
 Sample within a [server definition](serverdef.html):
 ```
 "ModCommands": {
-    "Commands": {
-        "Kick": { // a plain and simple kick command
-            "type": "kick",
-            "command": "!!kick"
-        },
-        "Party Ban": { // self-explanatory
-            "type": "ban",
-            "command": "!!party",
-            "successmsg": "Yay! $target got banned!\nhttps://i.imgur.com/i4CIBtT.jpg"
-        }
+    "Kick": { // a plain and simple kick command
+        "type": "kick",
+        "command": "!!kick"
+    },
+    "Party Ban": { // self-explanatory
+        "type": "ban",
+        "command": "!!party",
+        "successmsg": "Yay! $target got banned!\nhttps://i.imgur.com/i4CIBtT.jpg"
     }
 }
 ```
 
 ### Definition structure
-Commands are defined within a JSON object named `Commands` within another object named `ModCommands`. They are defined by means of name/value pairs, with the name serving as its label.
+Commands are defined within a `ModCommands` object, itself within a [server definition](serverdef.html). They are defined by means of name/value pairs, with the name serving as its label.
 
 The following values are **required** in a definition:
 * type (*string*) - Specifies the type of behavior that the command should take.
