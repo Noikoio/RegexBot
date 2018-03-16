@@ -53,7 +53,13 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 { "confreload", typeof(ConfReload) },
                 { "kick",       typeof(Kick) },
                 { "say",        typeof(Say) },
-                { "unban",      typeof(Unban) }
+                { "unban",      typeof(Unban) },
+                { "addrole",    typeof(RoleAdd) },
+                { "roleadd",    typeof(RoleAdd) },
+                { "grantrole",  typeof(RoleAdd) },
+                { "delrole",    typeof(RoleDel) },
+                { "roledel",    typeof(RoleDel) },
+                { "revokerole", typeof(RoleDel) }
             });
 
         public static Command CreateInstance(CommandListener root, JProperty def)
