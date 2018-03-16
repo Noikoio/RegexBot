@@ -28,4 +28,4 @@ The following is a list of accepted members within a server definition.
 * moderators (*[entity list](entitylist.html)*) - A list of entities to consider as moderators. Actions done by members of this list are able to execute *ModTools* commands and are exempt from certain *AutoMod* rules. See their respective pages for more details.
 * [automod](automod.html) (*name/value pairs*) - See respective page.
 * [autoresponses](autorespond.html) (*name/value pairs*) - See respective page.
-* [ModTools](modtools.html) (*name/value pairs*) - See respective page.
+* [ModCommands](modcommands.html) (*name/value pairs*) - See respective page.

@@ -55,11 +55,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 { "say",        typeof(Say) },
                 { "unban",      typeof(Unban) },
                 { "addrole",    typeof(RoleAdd) },
-                { "roleadd",    typeof(RoleAdd) },
-                { "grantrole",  typeof(RoleAdd) },
-                { "delrole",    typeof(RoleDel) },
-                { "roledel",    typeof(RoleDel) },
-                { "revokerole", typeof(RoleDel) }
+                { "delrole",    typeof(RoleDel) }
             });
 
         public static Command CreateInstance(CommandListener root, JProperty def)
