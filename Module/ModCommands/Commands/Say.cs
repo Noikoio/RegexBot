@@ -1,47 +1,42 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.ModTools.Commands
+namespace Noikoio.RegexBot.Module.ModCommands.Commands
 {
-    class Say : CommandBase
+    class Say : Command
     {
-        public Say(ModTools l, string label, JObject conf) : base(l, label, conf) { }
-
+        // No configuration at the moment.
         // TODO: Whitelist/blacklist - to limit which channels it can "say" into
+        public Say(CommandListener l, string label, JObject conf) : base(l, label, conf) {
+            DefaultUsageMsg = $"{this.Trigger} [channel] [message]\n"
+                + "Displays the given message exactly as specified to the given channel.";
+        }
+
+        #region Strings
+        const string ChannelRequired = ":x: You must specify a channel.";
+        const string MessageRequired = ":x: You must specify a message.";
+        const string TargetNotFound = ":x: Unable to find given channel.";
+        #endregion
 
         public override async Task Invoke(SocketGuild g, SocketMessage msg)
         {
             string[] line = msg.Content.Split(new char[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
             if (line.Length <= 1)
             {
-                await SendUsageMessage(msg, ":x: You must specify a channel.");
+                await SendUsageMessageAsync(msg.Channel, ChannelRequired);
                 return;
             }
             if (line.Length <= 2 || string.IsNullOrWhiteSpace(line[2]))
             {
-                await SendUsageMessage(msg, ":x: You must specify a message.");
+                await SendUsageMessageAsync(msg.Channel, MessageRequired);
                 return;
             }
 
             var ch = GetTextChannelFromString(g, line[1]);
-            if (ch == null) await SendUsageMessage(msg, ":x: Unable to find given channel.");
+            if (ch == null) await SendUsageMessageAsync(msg.Channel, TargetNotFound);
             await ch.SendMessageAsync(line[2]);
-        }
-
-        private async Task SendUsageMessage(SocketMessage m, string message)
-        {
-            string desc = $"{this.Command} [channel] [message]\n";
-            desc += "Displays the given message exactly as specified to the given channel.";
-
-            var usageEmbed = new EmbedBuilder()
-            {
-                Title = "Usage",
-                Description = desc
-            };
-            await m.Channel.SendMessageAsync(message ?? "", embed: usageEmbed);
         }
 
         private SocketTextChannel GetTextChannelFromString(SocketGuild g, string input)

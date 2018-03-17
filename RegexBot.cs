@@ -56,7 +56,7 @@ namespace Noikoio.RegexBot
             {
                 new Module.DMLogger.DMLogger(_client),
                 new Module.AutoMod.AutoMod(_client),
-                new Module.ModTools.ModTools(_client),
+                new Module.ModCommands.CommandListener(_client),
                 new Module.AutoRespond.AutoRespond(_client),
 
                 // EntityCache loads before anything using it

@@ -1,17 +1,14 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Noikoio.RegexBot.Module.ModTools.Commands
+namespace Noikoio.RegexBot.Module.ModCommands.Commands
 {
-    class BanKick : CommandBase
+    // Ban and kick commands are highly similar in implementation, and thus are handled in a single class.
+    class BanKick : Command
     {
-        // Ban and kick commands are highly similar in implementation, and thus are handled in a single class.
         protected enum CommandMode { Ban, Kick }
         private readonly CommandMode _mode;
 
@@ -28,7 +25,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
         // "notifymsg" - Message to send to the target user being acted upon. Default message is used
         //               if the value is not specified. If a blank value is given, the feature is disabled.
         //               Takes the special values $s for server name and $r for reason text.
-        protected BanKick(ModTools l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
+        protected BanKick(CommandListener l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
         {
             _mode = mode;
             _forceReason = conf["forcereason"]?.Value<bool>() ?? false;
@@ -49,13 +46,20 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 if (string.IsNullOrWhiteSpace(val)) _notifyMsg = null; // empty value - disable message
                 else _notifyMsg = val;
             }
+
+            // Building usage message here
+            DefaultUsageMsg = $"{this.Trigger} [user or user ID] " + (_forceReason ? "[reason]" : "*[reason]*") + "\n"
+                + "Removes the given user from this server"
+                + (_mode == CommandMode.Ban ? " and prevents the user from rejoining" : "") + ". "
+                + (_forceReason ? "L" : "Optionally l") + "ogs the reason for the "
+                + (_mode == CommandMode.Ban ? "ban" : "kick") + " to the Audit Log.";
+            if (_purgeDays > 0)
+                DefaultUsageMsg += $"\nAdditionally removes the user's post history for the last {_purgeDays} day(s).";
         }
 
         #region Strings
         const string FailPrefix = ":x: **Failed to {0} user:** ";
-        const string Fail403 = "I do not have the required permissions to perform that action.";
-        const string Fail404 = "The target user is no longer available.";
-        const string FailDefault = "An unknown error occurred. Notify the bot operator.";
+        const string Fail404 = "The specified user is no longer in the server.";
         const string NotifyDefault = "You have been {0} from $s for the following reason:\n$r";
         const string NotifyReasonNone = "No reason specified.";
         const string NotifyFailed = "\n(User was unable to receive notification message.)";
@@ -71,7 +75,7 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             string reason;
             if (line.Length < 2)
             {
-                await SendUsageMessage(msg, null);
+                await SendUsageMessageAsync(msg.Channel, null);
                 return;
             }
             targetstr = line[1];
@@ -86,33 +90,36 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 // No reason given
                 if (_forceReason)
                 {
-                    await SendUsageMessage(msg, ReasonRequired);
+                    await SendUsageMessageAsync(msg.Channel, ReasonRequired);
                     return;
                 }
                 reason = null;
             }
 
-            // Getting SocketGuildUser target
-            SocketGuildUser targetobj = null;
-
-            // Extract snowflake value from mention (if a mention was given)
-            Match m = UserMention.Match(targetstr);
-            if (m.Success) targetstr = m.Groups["snowflake"].Value;
-
-            var qres = (await EntityCache.EntityCache.QueryAsync(g.Id, targetstr)).FirstOrDefault();
-            if (qres == null)
+            // Retrieve target user
+            var (targetId, targetData) = await GetUserDataFromString(g.Id, targetstr);
+            if (targetId == 1)
             {
-                await SendUsageMessage(msg, TargetNotFound);
+                await msg.Channel.SendMessageAsync(FailPrefix + FailDefault);
                 return;
             }
-            ulong targetuid = qres.UserId;
-            targetobj = g.GetUser(targetuid);
-            string targetdisp = targetobj?.ToString() ?? $"ID {targetuid}";
+            if (targetId == 0)
+            {
+                await SendUsageMessageAsync(msg.Channel, TargetNotFound);
+                return;
+            }
+
+            SocketGuildUser targetobj = g.GetUser(targetId);
+            string targetdisp;
+            if (targetData != null)
+                targetdisp = $"{targetData.Username}#{targetData.Discriminator}";
+            else
+                targetdisp = $"ID {targetId}";
 
             if (_mode == CommandMode.Kick && targetobj == null)
             {
                 // Can't kick without obtaining the user object
-                await SendUsageMessage(msg, TargetNotFound);
+                await SendUsageMessageAsync(msg.Channel, TargetNotFound);
                 return;
             }
 
@@ -125,15 +132,16 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
                 string reasonlog = $"Invoked by {msg.Author.ToString()}.";
                 if (reason != null) reasonlog += $" Reason: {reason}";
                 reasonlog = Uri.EscapeDataString(reasonlog);
+                await notifyTask;
 #warning Remove EscapeDataString call on next Discord.Net update
 #if !DEBUG
-                if (_mode == CommandMode.Ban) await g.AddBanAsync(targetuid, _purgeDays, reasonlog);
-                else await targetobj.KickAsync(reason);
+                if (_mode == CommandMode.Ban) await g.AddBanAsync(targetId, _purgeDays, reasonlog);
+                else await targetobj.KickAsync(reasonlog);
 #else
 #warning "Actual kick/ban action is DISABLED during debug."
 #endif
                 string resultmsg = BuildSuccessMessage(targetdisp);
-                if (await notifyTask == false) resultmsg += NotifyFailed;
+                if (notifyTask.Result == false) resultmsg += NotifyFailed;
                 await msg.Channel.SendMessageAsync(resultmsg);
             }
             catch (Discord.Net.HttpException ex)
@@ -178,22 +186,6 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
             return true;
         }
 
-        private async Task SendUsageMessage(SocketMessage m, string message)
-        {
-            string desc = $"{this.Command} [user or user ID] " + (_forceReason ? "[reason]" : "*[reason]*") + "\n";
-            desc += "Removes the given user from this server and prevents the user from rejoining. ";
-            desc += (_forceReason ? "L" : "Optionally l") + "ogs the reason for the ban to the Audit Log.";
-            if (_purgeDays > 0)
-                desc += $"\nAdditionally removes the user's post history for the last {_purgeDays} day(s).";
-
-            var usageEmbed = new EmbedBuilder()
-            {
-                Title = "Usage",
-                Description = desc
-            };
-            await m.Channel.SendMessageAsync(message ?? "", embed: usageEmbed);
-        }
-
         private string BuildSuccessMessage(string targetstr)
         {
             const string defaultmsgBan = ":white_check_mark: Banned user **$target**.";
@@ -207,13 +199,13 @@ namespace Noikoio.RegexBot.Module.ModTools.Commands
 
     class Ban : BanKick
     {
-        public Ban(ModTools l, string label, JObject conf)
+        public Ban(CommandListener l, string label, JObject conf)
             : base(l, label, conf, CommandMode.Ban) { }
     }
 
     class Kick : BanKick
     {
-        public Kick(ModTools l, string label, JObject conf)
+        public Kick(CommandListener l, string label, JObject conf)
             : base(l, label, conf, CommandMode.Kick) { }
     }
 }
