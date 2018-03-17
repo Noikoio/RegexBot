@@ -19,9 +19,7 @@ namespace Noikoio.RegexBot.EntityCache
 
         public Module(DiscordSocketClient client) : base(client)
         {
-            _db = RegexBot.Config.Database;
-
-            if (_db.Available)
+            if (RegexBot.Config.DatabaseAvailable)
             {
                 SqlHelper.CreateCacheTablesAsync().Wait();
 

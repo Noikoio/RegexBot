@@ -25,6 +25,7 @@ namespace Noikoio.RegexBot
 
         /// <summary>
         /// Processes module-specific configuration.
+        /// This method is not called if the user did not provide configuration for the module.
         /// </summary>
         /// <remarks>
         /// Module code <i>should not</i> hold on to this data, but instead use <see cref="GetConfig(ulong)"/> to retrieve
@@ -36,8 +37,8 @@ namespace Noikoio.RegexBot
         /// Processed configuration data prepared for later use.
         /// </returns>
         /// <exception cref="ConfigItem.RuleImportException">
-        /// This method should throw RuleImportException in the event of any error.
-        /// The exception message will be properly logged.
+        /// This method should throw <see cref="ConfigItem.RuleImportException"/>
+        /// in the event of configuration errors. The exception message will be properly displayed.
         /// </exception>
         public abstract Task<object> ProcessConfiguration(JToken configSection);
 

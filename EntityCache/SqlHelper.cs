@@ -19,7 +19,7 @@ namespace Noikoio.RegexBot.EntityCache
         // Reminder: Check Cache query methods if making changes to tables
         internal static async Task CreateCacheTablesAsync()
         {
-            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
+            var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
             if (db == null) return;
             using (db)
             {
@@ -83,7 +83,7 @@ namespace Noikoio.RegexBot.EntityCache
         #region Insertions and updates
         internal static async Task UpdateGuildAsync(SocketGuild g)
         {
-            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
+            var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
             if (db == null) return;
             using (db)
             {
@@ -109,7 +109,7 @@ namespace Noikoio.RegexBot.EntityCache
         }
         internal static async Task UpdateGuildMemberAsync(IEnumerable<SocketGuildUser> users)
         {
-            var db = await RegexBot.Config.Database.GetOpenConnectionAsync();
+            var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
             if (db == null) return;
             using (db)
             {
