@@ -8,7 +8,7 @@ using System.Collections.ObjectModel;
 namespace Noikoio.RegexBot.Module.ModCommands
 {
     /// <summary>
-    /// Represents ModTools configuration within one server.
+    /// Contains a server's ModCommands configuration.
     /// </summary>
     class ConfigItem
     {

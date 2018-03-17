@@ -21,17 +21,17 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
     [DebuggerDisplay("Command def: {Label}")]
     abstract class Command
     {
-        private readonly CommandListener _modtools;
+        private readonly CommandListener _mod;
         private readonly string _label;
         private readonly string _command;
 
-        protected CommandListener Module => _modtools;
+        protected CommandListener Module => _mod;
         public string Label => _label;
         public string Trigger => _command;
 
         public Command(CommandListener l, string label, JObject conf)
         {
-            _modtools = l;
+            _mod = l;
             _label = label;
             _command = conf["command"].Value<string>();
         }
@@ -40,7 +40,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 
         protected Task Log(string text)
         {
-            return _modtools.Log($"{Label}: {text}");
+            return _mod.Log($"{Label}: {text}");
         }
 
         #region Config loading
