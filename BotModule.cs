@@ -51,10 +51,7 @@ namespace Noikoio.RegexBot
         protected object GetConfig(ulong guildId)
         {
             var sc = RegexBot.Config.Servers.FirstOrDefault(g => g.Id == guildId);
-            if (sc == null)
-            {
-                throw new ArgumentException("There is no known configuration associated with the given Guild ID.");
-            }
+            if (sc == null) return null;
 
             if (sc.ModuleConfigs.TryGetValue(this, out var item)) return item;
             else return null;
