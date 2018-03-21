@@ -5,6 +5,7 @@
     /// <summary>
     /// Used to join together an entity ID and its name when read from configuration.
     /// In configuration, entities are fully specified with a prefix (if necessary), an ID, two colons, and a name.
+    /// An EntityName struct can have either an ID, Name, or both. It cannot have neither.
     /// </summary>
     struct EntityName
     {
