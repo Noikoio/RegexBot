@@ -58,6 +58,7 @@ namespace Noikoio.RegexBot
                 new Module.AutoMod.AutoMod(_client),
                 new Module.ModCommands.CommandListener(_client),
                 new Module.AutoRespond.AutoRespond(_client),
+                new Module.EntryAutoRole.EntryAutoRole(_client),
 
                 // EntityCache loads before anything using it
                 new EntityCache.Module(_client),
