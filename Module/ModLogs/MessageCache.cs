@@ -17,11 +17,11 @@ namespace Noikoio.RegexBot.Module.ModLogs
     {
         private readonly DiscordSocketClient _dClient;
         private readonly AsyncLogger _outLog;
-        private readonly Func<ulong, object> _outGetConfig;
+        private readonly Func<ulong, GuildConfig> _outGetConfig;
 
         // TODO: How to clear the cache after a time? Can't hold on to this forever.
 
-        public MessageCache(DiscordSocketClient client, AsyncLogger logger, Func<ulong, object> getConfFunc)
+        public MessageCache(DiscordSocketClient client, AsyncLogger logger, Func<ulong, GuildConfig> getConfFunc)
         {
             _dClient = client;
             _outLog = logger;
@@ -85,7 +85,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             else return;
 
             // Check if this feature is enabled before doing anything else.
-            var cfg = _outGetConfig(guildId) as GuildConfig;
+            var cfg = _outGetConfig(guildId);
             if (cfg == null) return;
             if (isDelete && (cfg.RptTypes & EventType.MsgDelete) == 0) return;
             if (!isDelete && (cfg.RptTypes & EventType.MsgEdit) == 0) return;

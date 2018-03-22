@@ -19,14 +19,15 @@ namespace Noikoio.RegexBot.Module.ModLogs
             if (!RegexBot.Config.DatabaseAvailable) return;
             
             // MessageCache (reporting of MessageEdit, MessageDelete) handled by helper class
-            _msgCacheInstance = new MessageCache(client, Log, GetConfig);
+            _msgCacheInstance = new MessageCache(client, Log, delegate (ulong id) { return GetState<GuildConfig>(id); });
 
             // TODO add handlers for detecting joins, leaves, bans, kicks, user edits (nick/username/discr)
             // TODO add handler for processing the log query command
         }
         
-        public override async Task<object> ProcessConfiguration(JToken configSection)
+        public override async Task<object> CreateInstanceState(JToken configSection)
         {
+            if (configSection == null) return null;
             if (configSection.Type != JTokenType.Object)
                 throw new RuleImportException("Configuration for this section is invalid.");
             

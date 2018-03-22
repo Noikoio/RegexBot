@@ -36,8 +36,9 @@ namespace Noikoio.RegexBot.Module.EntryAutoRole
             Task.Factory.StartNew(Worker, _workerCancel.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
         
-        public override Task<object> ProcessConfiguration(JToken configSection)
+        public override Task<object> CreateInstanceState(JToken configSection)
         {
+            if (configSection == null) return Task.FromResult<object>(null);
             if (configSection.Type != JTokenType.Object)
             {
                 throw new RuleImportException("Configuration for this section is invalid.");
@@ -47,7 +48,7 @@ namespace Noikoio.RegexBot.Module.EntryAutoRole
 
         private Task Client_GuildAvailable(SocketGuild arg)
         {
-            var conf = (ModuleConfig)GetConfig(arg.Id);
+            var conf = GetState<ModuleConfig>(arg.Id);
             if (conf == null) return Task.CompletedTask;
             SocketRole trole = GetRole(arg);
             if (trole == null) return Task.CompletedTask;
@@ -71,19 +72,19 @@ namespace Noikoio.RegexBot.Module.EntryAutoRole
 
         private Task Client_UserLeft(SocketGuildUser arg)
         {
-            if (GetConfig(arg.Guild.Id) == null) return Task.CompletedTask;
+            if (GetState<object>(arg.Guild.Id) == null) return Task.CompletedTask;
             lock (_roleWaitLock) _roleWaitlist.RemoveAll(m => m.GuildId == arg.Guild.Id && m.UserId == arg.Id);
             return Task.CompletedTask;
         }
 
         private Task Client_UserJoined(SocketGuildUser arg)
         {
-            if (GetConfig(arg.Guild.Id) == null) return Task.CompletedTask;
+            if (GetState<object>(arg.Guild.Id) == null) return Task.CompletedTask;
             lock (_roleWaitLock) _roleWaitlist.Add(new AutoRoleEntry()
             {
                 GuildId = arg.Guild.Id,
                 UserId = arg.Id,
-                ExpireTime = DateTimeOffset.UtcNow.AddSeconds(((ModuleConfig)GetConfig(arg.Guild.Id)).TimeDelay)
+                ExpireTime = DateTimeOffset.UtcNow.AddSeconds((GetState<ModuleConfig>(arg.Guild.Id)).TimeDelay)
             });
             return Task.CompletedTask;
         }
@@ -91,7 +92,7 @@ namespace Noikoio.RegexBot.Module.EntryAutoRole
         // can return null
         private SocketRole GetRole(SocketGuild g)
         {
-            var conf = (ModuleConfig)GetConfig(g.Id);
+            var conf = GetState<ModuleConfig>(g.Id);
             if (conf == null) return null;
             var roleInfo = conf.Role;
             

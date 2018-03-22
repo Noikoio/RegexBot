@@ -33,15 +33,16 @@ namespace Noikoio.RegexBot.Module.AutoRespond
             var ch = arg.Channel as SocketGuildChannel;
             if (ch == null) return;
             
-            var defs = GetConfig(ch.Guild.Id) as IEnumerable<ConfigItem>;
+            var defs = GetState<IEnumerable<ConfigItem>>(ch.Guild.Id);
             if (defs == null) return;
 
             foreach (var def in defs)
                 await Task.Run(async () => await ProcessMessage(arg, def));
         }
         
-        public override async Task<object> ProcessConfiguration(JToken configSection)
+        public override async Task<object> CreateInstanceState(JToken configSection)
         {
+            if (configSection == null) return null;
             var responses = new List<ConfigItem>();
             foreach (var def in configSection.Children<JProperty>())
             {

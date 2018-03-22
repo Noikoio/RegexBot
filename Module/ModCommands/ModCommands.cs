@@ -32,8 +32,10 @@ namespace Noikoio.RegexBot.Module.ModCommands
             if (arg.Channel is IGuildChannel) await CommandCheckInvoke(arg);
         }
         
-        public override async Task<object> ProcessConfiguration(JToken configSection)
+        public override async Task<object> CreateInstanceState(JToken configSection)
         {
+            if (configSection == null) return null;
+
             // Constructor throws exception on config errors
             var conf = new ConfigItem(this, configSection);
 
@@ -43,8 +45,6 @@ namespace Noikoio.RegexBot.Module.ModCommands
 
             return conf;
         }
-
-        private new ConfigItem GetConfig(ulong guildId) => (ConfigItem)base.GetConfig(guildId);
 
         public new Task Log(string text) => base.Log(text);
 
@@ -67,7 +67,7 @@ namespace Noikoio.RegexBot.Module.ModCommands
             int spc = arg.Content.IndexOf(' ');
             if (spc != -1) cmdchk = arg.Content.Substring(0, spc);
             else cmdchk = arg.Content;
-            if (GetConfig(g.Id).Commands.TryGetValue(cmdchk, out var c))
+            if (GetState<ConfigItem>(g.Id).Commands.TryGetValue(cmdchk, out var c))
             {
                 try
                 {

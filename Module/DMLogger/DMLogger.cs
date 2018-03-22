@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Newtonsoft.Json.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -33,8 +32,6 @@ namespace Noikoio.RegexBot.Module.DMLogger
 
             await ProcessMessage(arg2, true);
         }
-
-        public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
 
         private async Task ProcessMessage(SocketMessage arg, bool edited)
         {

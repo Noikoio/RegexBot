@@ -22,8 +22,9 @@ namespace Noikoio.RegexBot.Module.AutoMod
             client.MessageUpdated += CMessageUpdated;
         }
         
-        public override async Task<object> ProcessConfiguration(JToken configSection)
+        public override async Task<object> CreateInstanceState(JToken configSection)
         {
+            if (configSection == null) return null;
             List<ConfigItem> rules = new List<ConfigItem>();
 
             foreach (var def in configSection.Children<JProperty>())
@@ -52,7 +53,7 @@ namespace Noikoio.RegexBot.Module.AutoMod
             if (ch == null) return;
 
             // Get rules
-            var rules = GetConfig(ch.Guild.Id) as IEnumerable<ConfigItem>;
+            var rules = GetState<IEnumerable<ConfigItem>>(ch.Guild.Id);
             if (rules == null) return;
 
             foreach (var rule in rules)

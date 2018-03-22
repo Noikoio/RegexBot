@@ -32,8 +32,6 @@ namespace Noikoio.RegexBot.EntityCache
                 Log("No database storage available.").Wait();
             }
         }
-
-        public override Task<object> ProcessConfiguration(JToken configSection) => Task.FromResult<object>(null);
         
         // Guild and guild member information has become available.
         // This is a very expensive operation, especially when joining larger guilds.

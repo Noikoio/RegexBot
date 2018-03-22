@@ -24,37 +24,35 @@ namespace Noikoio.RegexBot
         }
 
         /// <summary>
-        /// Processes module-specific configuration.
-        /// This method is not called if the user did not provide configuration for the module.
+        /// This method is called on each module when configuration is (re)loaded.
+        /// The module is expected to use this opportunity to set up an object that will hold state data
+        /// for a particular guild, using the incoming configuration object as needed in order to do so.
         /// </summary>
         /// <remarks>
-        /// Module code <i>should not</i> hold on to this data, but instead use <see cref="GetConfig(ulong)"/> to retrieve
-        /// them. This is in the event that configuration is reverted to an earlier state and allows for the
-        /// all modules to revert to previously used configuration values with no effort on the part of the
-        /// module code itself.
+        /// Module code <i>should not</i> hold on state or configuration data on its own, but instead use
+        /// <see cref="GetState{T}(ulong)"/> to retrieve its state object. This is to provide the user
+        /// with the ability to maintain the current bot state in the event that a configuration reload fails.
         /// </remarks>
-        /// <returns>
-        /// Processed configuration data prepared for later use.
-        /// </returns>
-        /// <exception cref="ConfigItem.RuleImportException">
-        /// This method should throw <see cref="ConfigItem.RuleImportException"/>
-        /// in the event of configuration errors. The exception message will be properly displayed.
-        /// </exception>
-        public abstract Task<object> ProcessConfiguration(JToken configSection);
+        /// <param name="configSection">
+        /// Configuration data for this module, for this guild. Is null if none was defined.
+        /// </param>
+        /// <returns>An object that may later be retrieved by <see cref="GetState{T}(ulong)"/>.</returns>
+        public virtual Task<object> CreateInstanceState(JToken configSection) => Task.FromResult<object>(null);
 
         /// <summary>
-        /// Gets this module's relevant configuration data associated with the given Discord guild.
+        /// Retrieves this module's relevant state data associated with the given Discord guild.
         /// </summary>
         /// <returns>
-        /// The stored configuration data, or null if none exists.
+        /// The stored state data, or null/default if none exists.
         /// </returns>
-        protected object GetConfig(ulong guildId)
+        protected T GetState<T>(ulong guildId)
         {
+            // TODO investigate if locking may be necessary
             var sc = RegexBot.Config.Servers.FirstOrDefault(g => g.Id == guildId);
-            if (sc == null) return null;
+            if (sc == null) return default(T);
 
-            if (sc.ModuleConfigs.TryGetValue(this, out var item)) return item;
-            else return null;
+            if (sc.ModuleConfigs.TryGetValue(this, out var item)) return (T)item;
+            else return default(T);
         }
 
         /// <summary>

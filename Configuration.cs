@@ -158,29 +158,28 @@ namespace Noikoio.RegexBot
                 EntityList mods = new EntityList(sconf["moderators"]);
                 if (sconf["moderators"] != null) await SLog("Moderator " + mods.ToString());
                 
-                // Load module configurations
+                // Set up module state / load configurations
                 Dictionary<BotModule, object> customConfs = new Dictionary<BotModule, object>();
                 foreach (var item in _bot.Modules)
                 {
                     var confSection = item.Name;
 
                     var section = sconf[confSection];
-                    if (section == null)
-                    {
-                        // Section not in config. Do not call loader method.
-                        await SLog("Additional configuration not defined for " + item.Name);
-                        continue;
-                    }
-
-                    await SLog("Loading additional configuration for " + item.Name);
+                    await SLog("Setting up " + item.Name);
                     object result;
                     try
                     {
-                        result = await item.ProcessConfiguration(section);
+                        result = await item.CreateInstanceState(section);
                     }
                     catch (RuleImportException ex)
                     {
                         await SLog($"{item.Name} failed to load configuration: " + ex.Message);
+                        return false;
+                    }
+                    catch (Exception ex)
+                    {
+                        await SLog("Encountered unhandled exception:");
+                        await SLog(ex.ToString());
                         return false;
                     }
 
