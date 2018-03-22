@@ -162,16 +162,12 @@ namespace Noikoio.RegexBot
                 Dictionary<BotModule, object> customConfs = new Dictionary<BotModule, object>();
                 foreach (var item in _bot.Modules)
                 {
-                    var attr = item.GetType().GetTypeInfo()
-                        .GetMethod("ProcessConfiguration").GetCustomAttribute<ConfigSectionAttribute>();
-                    if (attr == null)
-                    {
-                        await SLog("No additional configuration for " + item.Name);
-                        continue;
-                    }
-                    var section = sconf[attr.SectionName];
+                    var confSection = item.Name;
+
+                    var section = sconf[confSection];
                     if (section == null)
                     {
+                        // Section not in config. Do not call loader method.
                         await SLog("Additional configuration not defined for " + item.Name);
                         continue;
                     }
@@ -191,8 +187,7 @@ namespace Noikoio.RegexBot
                     customConfs.Add(item, result);
                 }
 
-
-                // Switch to using new data
+                // Switch to new configuration
                 List<Tuple<Regex, string[]>> rulesfinal = new List<Tuple<Regex, string[]>>();
                 newservers.Add(new ServerConfig(sid, mods, new ReadOnlyDictionary<BotModule, object>(customConfs)));
             }

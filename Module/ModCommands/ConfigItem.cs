@@ -16,7 +16,7 @@ namespace Noikoio.RegexBot.Module.ModCommands
         
         public ReadOnlyDictionary<string, Command> Commands => _cmdInstances;
 
-        public ConfigItem(CommandListener instance, JToken inconf)
+        public ConfigItem(ModCommands instance, JToken inconf)
         {
             if (inconf.Type != JTokenType.Object)
             {

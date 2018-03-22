@@ -12,8 +12,6 @@ namespace Noikoio.RegexBot.Module.DMLogger
     /// </summary>
     class DMLogger : BotModule
     {
-        public override string Name => nameof(DMLogger);
-
         public DMLogger(DiscordSocketClient client) : base(client)
         {
             client.MessageReceived += Client_MessageReceived;

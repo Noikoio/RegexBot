@@ -11,8 +11,6 @@ namespace Noikoio.RegexBot.Module.ModLogs
     /// </summary>
     class ModLogs : BotModule
     {
-        public override string Name => "ModLogs";
-
         private readonly MessageCache _msgCacheInstance;
 
         public ModLogs(DiscordSocketClient client) : base(client)
@@ -26,8 +24,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             // TODO add handlers for detecting joins, leaves, bans, kicks, user edits (nick/username/discr)
             // TODO add handler for processing the log query command
         }
-
-        [ConfigSection("ModLogs")]
+        
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
             if (configSection.Type != JTokenType.Object)

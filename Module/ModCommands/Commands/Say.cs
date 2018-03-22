@@ -9,7 +9,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
     {
         // No configuration at the moment.
         // TODO: Whitelist/blacklist - to limit which channels it can "say" into
-        public Say(CommandListener l, string label, JObject conf) : base(l, label, conf) {
+        public Say(ModCommands l, string label, JObject conf) : base(l, label, conf) {
             DefaultUsageMsg = $"{this.Trigger} [channel] [message]\n"
                 + "Displays the given message exactly as specified to the given channel.";
         }

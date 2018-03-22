@@ -6,7 +6,7 @@ AutoMod is set up by defining rules within a JSON object named `automod` within 
 
 Sample within a [server definition](serverdef.html):
 ```
-"automod": {
+"AutoMod": {
     "Delete bilingual pirates": {
         "regex": [ "pira(te|cy)", "pirat(a|ería)", ],
         "response": [

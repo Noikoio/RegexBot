@@ -14,8 +14,6 @@ namespace Noikoio.RegexBot.Module.EntryAutoRole
     /// </summary>
     class EntryAutoRole : BotModule
     {
-        public override string Name => "EntryAutoRole";
-        
         private List<AutoRoleEntry> _roleWaitlist;
         private object _roleWaitLock = new object();
 
@@ -37,8 +35,7 @@ namespace Noikoio.RegexBot.Module.EntryAutoRole
             _workerCancel = new CancellationTokenSource();
             Task.Factory.StartNew(Worker, _workerCancel.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
-
-        [ConfigSection("EntryAutoRole")]
+        
         public override Task<object> ProcessConfiguration(JToken configSection)
         {
             if (configSection.Type != JTokenType.Object)

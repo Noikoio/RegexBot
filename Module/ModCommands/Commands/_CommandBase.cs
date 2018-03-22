@@ -16,20 +16,20 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
     /// <summary>
     /// Base class for a command within the module.
     /// After implementing, don't forget to add a reference to
-    /// <see cref="CreateInstance(CommandListener, JProperty)"/>.
+    /// <see cref="CreateInstance(ModCommands, JProperty)"/>.
     /// </summary>
     [DebuggerDisplay("Command def: {Label}")]
     abstract class Command
     {
-        private readonly CommandListener _mod;
+        private readonly ModCommands _mod;
         private readonly string _label;
         private readonly string _command;
 
-        protected CommandListener Module => _mod;
+        protected ModCommands Module => _mod;
         public string Label => _label;
         public string Trigger => _command;
 
-        public Command(CommandListener l, string label, JObject conf)
+        public Command(ModCommands l, string label, JObject conf)
         {
             _mod = l;
             _label = label;
@@ -58,7 +58,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 { "delrole",    typeof(RoleDel) }
             });
 
-        public static Command CreateInstance(CommandListener root, JProperty def)
+        public static Command CreateInstance(ModCommands root, JProperty def)
         {
             string label = def.Name;
             if (string.IsNullOrWhiteSpace(label)) throw new RuleImportException("Label cannot be blank.");

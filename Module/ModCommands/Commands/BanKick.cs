@@ -25,7 +25,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
         // "notifymsg" - Message to send to the target user being acted upon. Default message is used
         //               if the value is not specified. If a blank value is given, the feature is disabled.
         //               Takes the special values $s for server name and $r for reason text.
-        protected BanKick(CommandListener l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
+        protected BanKick(ModCommands l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
         {
             _mode = mode;
             _forceReason = conf["forcereason"]?.Value<bool>() ?? false;
@@ -199,13 +199,13 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 
     class Ban : BanKick
     {
-        public Ban(CommandListener l, string label, JObject conf)
+        public Ban(ModCommands l, string label, JObject conf)
             : base(l, label, conf, CommandMode.Ban) { }
     }
 
     class Kick : BanKick
     {
-        public Kick(CommandListener l, string label, JObject conf)
+        public Kick(ModCommands l, string label, JObject conf)
             : base(l, label, conf, CommandMode.Kick) { }
     }
 }

@@ -10,7 +10,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
         // No configuration.
         // TODO bring in some options from BanKick. Particularly custom success msg.
         // TODO when ModLogs fully implemented, add a reason?
-        public Unban(CommandListener l, string label, JObject conf) : base(l, label, conf) {
+        public Unban(ModCommands l, string label, JObject conf) : base(l, label, conf) {
             DefaultUsageMsg = $"{this.Trigger} [user or user ID]\n"
                 + "Unbans the given user, allowing them to rejoin the server.";
         }

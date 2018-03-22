@@ -13,8 +13,8 @@ namespace Noikoio.RegexBot
     {
         private readonly DiscordSocketClient _client;
         private readonly AsyncLogger _logger;
-        
-        public abstract string Name { get; }
+
+        public string Name => this.GetType().Name;
         protected DiscordSocketClient Client => _client;
 
         public BotModule(DiscordSocketClient client)
@@ -79,26 +79,5 @@ namespace Noikoio.RegexBot
         public sealed override bool Equals(object obj) => base.Equals(obj);
         public sealed override int GetHashCode() => base.GetHashCode();
         public sealed override string ToString() => base.ToString();
-    }
-
-    /// <summary>
-    /// Indicates which section under an individual Discord guild configuration should be passed to the
-    /// module's <see cref="BotModule.ProcessConfiguration(JToken)"/> method during configuration load.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-    public class ConfigSectionAttribute : Attribute
-    {
-        private readonly string _sectionName;
-
-        public string SectionName => _sectionName;
-
-        public ConfigSectionAttribute(string sectionName)
-        {
-            if (string.IsNullOrWhiteSpace(sectionName))
-            {
-                throw new ArgumentNullException("Configuration section name cannot be blank.");
-            }
-            _sectionName = sectionName;
-        }
     }
 }

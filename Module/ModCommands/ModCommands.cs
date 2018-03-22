@@ -17,11 +17,9 @@ namespace Noikoio.RegexBot.Module.ModCommands
     /// done in a way that would easily allow for flexibility and modifications during runtime.
     /// Thus, reinventing the wheel right here.
     /// </remarks>
-    class CommandListener : BotModule
+    class ModCommands : BotModule
     {
-        public override string Name => "ModCommands";
-        
-        public CommandListener(DiscordSocketClient client) : base(client)
+        public ModCommands(DiscordSocketClient client) : base(client)
         {
             client.MessageReceived += Client_MessageReceived;
         }
@@ -34,7 +32,6 @@ namespace Noikoio.RegexBot.Module.ModCommands
             if (arg.Channel is IGuildChannel) await CommandCheckInvoke(arg);
         }
         
-        [ConfigSection("ModCommands")]
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
             // Constructor throws exception on config errors

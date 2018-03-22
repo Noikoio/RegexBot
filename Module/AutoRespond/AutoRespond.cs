@@ -22,8 +22,6 @@ namespace Noikoio.RegexBot.Module.AutoRespond
     partial class AutoRespond : BotModule
     {
         #region BotModule implementation
-        public override string Name => "AutoRespond";
-
         public AutoRespond(DiscordSocketClient client) : base(client)
         {
             client.MessageReceived += Client_MessageReceived;
@@ -41,8 +39,7 @@ namespace Noikoio.RegexBot.Module.AutoRespond
             foreach (var def in defs)
                 await Task.Run(async () => await ProcessMessage(arg, def));
         }
-
-        [ConfigSection("autoresponses")]
+        
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
             var responses = new List<ConfigItem>();

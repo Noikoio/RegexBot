@@ -56,7 +56,7 @@ namespace Noikoio.RegexBot
             {
                 new Module.DMLogger.DMLogger(_client),
                 new Module.AutoMod.AutoMod(_client),
-                new Module.ModCommands.CommandListener(_client),
+                new Module.ModCommands.ModCommands(_client),
                 new Module.AutoRespond.AutoRespond(_client),
                 new Module.EntryAutoRole.EntryAutoRole(_client),
 

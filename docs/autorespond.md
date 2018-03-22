@@ -6,7 +6,7 @@ This may seem like a redundant feature, given that the same can be accomplished 
 
 Sample within a [server definition](serverdef.html):
 ```
-"autorespond": {
+"AutoRespond": {
     "Help command": {
         "regex": "^!help$",
         "reply": "You can't be helped. Try again in 45 minutes.",

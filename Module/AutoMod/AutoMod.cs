@@ -16,15 +16,12 @@ namespace Noikoio.RegexBot.Module.AutoMod
     /// </remarks>
     class AutoMod : BotModule
     {
-        public override string Name => "AutoMod";
-
         public AutoMod(DiscordSocketClient client) : base(client)
         {
             client.MessageReceived += CMessageReceived;
             client.MessageUpdated += CMessageUpdated;
         }
-
-        [ConfigSection("automod")]
+        
         public override async Task<object> ProcessConfiguration(JToken configSection)
         {
             List<ConfigItem> rules = new List<ConfigItem>();

@@ -19,7 +19,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
         // "role" - string; The given role that applies to this command.
         // "successmsg" - string; Messages to display on command success. Overrides default.
 
-        protected RoleManipulation(CommandListener l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
+        protected RoleManipulation(ModCommands l, string label, JObject conf, CommandMode mode) : base(l, label, conf)
         {
             _mode = mode;
             var rolestr = conf["role"]?.Value<string>();
@@ -123,11 +123,11 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 
     class RoleAdd : RoleManipulation
     {
-        public RoleAdd(CommandListener l, string label, JObject conf) : base(l, label, conf, CommandMode.Add) { }
+        public RoleAdd(ModCommands l, string label, JObject conf) : base(l, label, conf, CommandMode.Add) { }
     }
 
     class RoleDel : RoleManipulation
     {
-        public RoleDel(CommandListener l, string label, JObject conf) : base(l, label, conf, CommandMode.Del) { }
+        public RoleDel(ModCommands l, string label, JObject conf) : base(l, label, conf, CommandMode.Del) { }
     }
 }

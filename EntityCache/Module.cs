@@ -15,8 +15,6 @@ namespace Noikoio.RegexBot.EntityCache
     {
         private readonly DatabaseConfig _db;
 
-        public override string Name => nameof(EntityCache);
-
         public Module(DiscordSocketClient client) : base(client)
         {
             if (RegexBot.Config.DatabaseAvailable)
