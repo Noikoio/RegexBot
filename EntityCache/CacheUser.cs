@@ -166,6 +166,9 @@ namespace Noikoio.RegexBot.EntityCache
                 disc = null;
             }
 
+            // Strip leading @ from name, if any
+            if (name.Length > 0 && name[0] == '@') name = name.Substring(1);
+
             // Local cache search
             var lresult = LocalQueryAsync(c, guild, name, disc);
             if (lresult.Count() != 0) return lresult;
@@ -211,15 +214,16 @@ namespace Noikoio.RegexBot.EntityCache
             {
                 using (var c = db.CreateCommand())
                 {
-                    c.CommandText = $"SELECT {QueryColumns} FROM {SqlHelper.TableUser} WHERE "
-                        + "( lower(username) = lower(@NameSearch) OR lower(nickname) = lower(@NameSearch) ) "
-                        + "ORDER BY cache_date desc, username";
-                    c.Parameters.Add("@NameSearch", NpgsqlTypes.NpgsqlDbType.Text).Value = name;
+                    c.CommandText = $"SELECT {QueryColumns} FROM {SqlHelper.TableUser} WHERE"
+                        + " ( lower(username) = lower(@NameSearch) OR lower(nickname) = lower(@NameSearch) )";
                     if (disc != null)
                     {
                         c.CommandText += " AND discriminator = @DiscSearch";
                         c.Parameters.Add("@DiscSearch", NpgsqlTypes.NpgsqlDbType.Text).Value = disc;
                     }
+                    c.CommandText += " ORDER BY cache_date desc, username";
+                    c.Parameters.Add("@NameSearch", NpgsqlTypes.NpgsqlDbType.Text).Value = name;
+                    
                     c.Prepare();
 
                     using (var r = await c.ExecuteReaderAsync())
