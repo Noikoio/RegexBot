@@ -100,7 +100,8 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
             var (targetId, targetData) = await GetUserDataFromString(g.Id, targetstr);
             if (targetId == 1)
             {
-                await msg.Channel.SendMessageAsync(FailPrefix + FailDefault);
+                await msg.Channel.SendMessageAsync(
+                    string.Format(FailPrefix, (_mode == CommandMode.Ban ? "ban" : "kick")) + FailDefault);
                 return;
             }
             if (targetId == 0)
