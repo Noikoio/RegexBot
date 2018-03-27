@@ -5,13 +5,13 @@ using System;
 namespace Noikoio.RegexBot.Module.ModLogs
 {
     /// <summary>
-    /// ModLogs guild-specific configuration values.
+    /// ModLogs guild-specific values.
     /// </summary>
-    class GuildConfig
+    class GuildState
     {
         // Event reporting
         private readonly EntityName _rptTarget;
-        private EventType _rptTypes;
+        private LogEntry.LogType _rptTypes;
         /// <summary>
         /// Target reporting channel.
         /// </summary>
@@ -19,12 +19,12 @@ namespace Noikoio.RegexBot.Module.ModLogs
         /// <summary>
         /// Event types to send to the reporting channel.
         /// </summary>
-        public EventType RptTypes => _rptTypes;
+        public LogEntry.LogType RptTypes => _rptTypes;
 
         // Query command
         private readonly string _qCmd; // command name
         private readonly EntityList _qAccess; // list of those able to issue the command
-        private readonly EventType _qDefaultAnswer; // default entry types to display
+        private readonly LogEntry.LogType _qDefaultAnswer; // default entry types to display
         /// <summary>
         /// Query command. The first word in an incoming message, including prefix, that triggers a query.
         /// </summary>
@@ -37,16 +37,16 @@ namespace Noikoio.RegexBot.Module.ModLogs
         /// <summary>
         /// Event types to display in a query.
         /// </summary>
-        public EventType QrTypes => _qDefaultAnswer;
+        public LogEntry.LogType QrTypes => _qDefaultAnswer;
 
-        public GuildConfig(JObject cfgRoot)
+        public GuildState(JObject cfgRoot)
         {
             // AutoReporting settings
             var arcfg = cfgRoot["AutoReporting"];
             if (arcfg == null)
             {
                 _rptTarget = default(EntityName); // NOTE: Change this if EntityName becomes a class later
-                _rptTypes = EventType.None;
+                _rptTypes = LogEntry.LogType.None;
             }
             else if (arcfg.Type == JTokenType.Object)
             {
@@ -61,7 +61,14 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
                 // TODO make optional
                 string rpval = arcfg["Events"]?.Value<string>();
-                _rptTypes = GetTypesFromString(rpval);
+                try
+                {
+                    _rptTypes = LogEntry.GetLogTypeFromString(rpval);
+                }
+                catch (ArgumentException ex)
+                {
+                    throw new RuleImportException(ex.Message);
+                }
             }
             else
             {
@@ -74,7 +81,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             {
                 _qCmd = null;
                 _qAccess = null;
-                _qDefaultAnswer = EventType.None;
+                _qDefaultAnswer = LogEntry.LogType.None;
             }
             else if (arcfg.Type == JTokenType.Object)
             {
@@ -90,38 +97,20 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
                 // TODO make optional
                 string ansval = arcfg["DefaultEvents"]?.Value<string>();
-                _qDefaultAnswer = GetTypesFromString(ansval);
+                try
+                {
+                    _qDefaultAnswer = LogEntry.GetLogTypeFromString(ansval);
+                }
+                catch (ArgumentException ex)
+                {
+                    throw new RuleImportException(ex.Message);
+                }
+
             }
             else
             {
                 throw new RuleImportException("Section for QueryCommand is not correctly defined.");
             }
-        }
-
-        public static EventType GetTypesFromString(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input))
-                throw new RuleImportException("Types are not properly defined.");
-
-            var strTypes = input.Split(
-                new char[] { ' ', ',', '/', '+' }, // and more?
-                StringSplitOptions.RemoveEmptyEntries);
-
-            EventType endResult = EventType.None;
-            foreach (var item in strTypes)
-            {
-                try
-                {
-                    var result = Enum.Parse<EventType>(item, true);
-                    endResult |= result;
-                }
-                catch (ArgumentException)
-                {
-                    throw new RuleImportException($"Unable to determine the given event type \"{item}\"");
-                }
-            }
-
-            return endResult;
         }
     }
 }

@@ -19,7 +19,9 @@ namespace Noikoio.RegexBot.Module.ModLogs
             if (!RegexBot.Config.DatabaseAvailable) return;
             
             // MessageCache (reporting of MessageEdit, MessageDelete) handled by helper class
-            _msgCacheInstance = new MessageCache(client, Log, delegate (ulong id) { return GetState<GuildConfig>(id); });
+            _msgCacheInstance = new MessageCache(client, Log, delegate (ulong id) { return GetState<GuildState>(id); });
+
+            LogEntry.CreateTables();
 
             // TODO add handlers for detecting joins, leaves, bans, kicks, user edits (nick/username/discr)
             // TODO add handler for processing the log query command
@@ -37,8 +39,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 return null;
             }
 
-            var conf = new GuildConfig((JObject)configSection);
-            if (conf.RptTypes != EventType.None)
+            var conf = new GuildState((JObject)configSection);
+            if (conf.RptTypes != LogEntry.LogType.None)
                 await Log("Enabled event autoreporting to " + conf.RptTarget);
 
             return conf;

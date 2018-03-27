@@ -17,11 +17,11 @@ namespace Noikoio.RegexBot.Module.ModLogs
     {
         private readonly DiscordSocketClient _dClient;
         private readonly AsyncLogger _outLog;
-        private readonly Func<ulong, GuildConfig> _outGetConfig;
+        private readonly Func<ulong, GuildState> _outGetConfig;
 
         // TODO: How to clear the cache after a time? Can't hold on to this forever.
 
-        public MessageCache(DiscordSocketClient client, AsyncLogger logger, Func<ulong, GuildConfig> getConfFunc)
+        public MessageCache(DiscordSocketClient client, AsyncLogger logger, Func<ulong, GuildState> getConfFunc)
         {
             _dClient = client;
             _outLog = logger;
@@ -87,8 +87,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
             // Check if this feature is enabled before doing anything else.
             var cfg = _outGetConfig(guildId);
             if (cfg == null) return;
-            if (isDelete && (cfg.RptTypes & EventType.MsgDelete) == 0) return;
-            if (!isDelete && (cfg.RptTypes & EventType.MsgEdit) == 0) return;
+            if (isDelete && (cfg.RptTypes & LogEntry.LogType.MsgDelete) == 0) return;
+            if (!isDelete && (cfg.RptTypes & LogEntry.LogType.MsgEdit) == 0) return;
 
             // Ignore if it's a message being deleted withing the reporting channel.
             if (isDelete && cfg.RptTarget.Value.Id.Value == ch.Id) return;
@@ -122,7 +122,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                         }
                     }
                 }
-                if (userId != 0) ucd = await EntityCache.EntityCache.QueryAsync(guildId, userId);
+                if (userId != 0) ucd = await EntityCache.EntityCache.QueryUserAsync(guildId, userId);
             }
             catch (NpgsqlException ex)
             {
