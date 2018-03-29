@@ -23,4 +23,5 @@ Value names are **case sensitive**. Keep this in mind, as case is not consistent
 
 * bot-token (*string*) - Discord token for connecting to the service. **Required.**
 * playing (*string*) - Optional text to display for the bot's status message.
+* database (*object*) - Holds optional [database configuration](database.html).
 * servers (*array*) - Takes an array of unnamed [server definition](serverdef.html) objects.
