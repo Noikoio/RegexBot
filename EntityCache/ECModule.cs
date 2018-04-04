@@ -11,11 +11,11 @@ namespace Noikoio.RegexBot.EntityCache
     /// The function of this module should be transparent to the user, and thus no configuration is needed.
     /// This module should be initialized BEFORE any other modules that make use of the entity cache.
     /// </summary>
-    class Module : BotModule
+    class ECModule : BotModule
     {
         private readonly DatabaseConfig _db;
 
-        public Module(DiscordSocketClient client) : base(client)
+        public ECModule(DiscordSocketClient client) : base(client)
         {
             if (RegexBot.Config.DatabaseAvailable)
             {

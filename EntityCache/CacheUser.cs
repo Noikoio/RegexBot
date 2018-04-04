@@ -102,7 +102,7 @@ namespace Noikoio.RegexBot.EntityCache
             // Database cache search
             var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
             if (db == null) return null; // Database not available for query.
-            using (db) return await DbQueryAsync(db, guild, user);
+            return await DbQueryAsync(db, guild, user);
         }
 
         private static CacheUser LocalQueryAsync(DiscordSocketClient c, ulong guild, ulong user)
@@ -175,8 +175,8 @@ namespace Noikoio.RegexBot.EntityCache
 
             // Database cache search
             var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
-            if (db == null) return null; // Database not available for query.
-            using (db) return await DbQueryAsync(db, guild, name, disc);
+            if (db == null) return new CacheUser[0]; // Database not available for query.
+            return await DbQueryAsync(db, guild, name, disc);
         }
 
         private static IEnumerable<CacheUser> LocalQueryAsync(DiscordSocketClient c, ulong guild, string name, string disc)
@@ -210,7 +210,7 @@ namespace Noikoio.RegexBot.EntityCache
         {
             var result = new List<CacheUser>();
 
-            using (db = await RegexBot.Config.GetOpenDatabaseConnectionAsync())
+            using (db)
             {
                 using (var c = db.CreateCommand())
                 {
