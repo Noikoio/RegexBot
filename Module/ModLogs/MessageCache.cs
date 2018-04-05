@@ -20,6 +20,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
         private readonly Func<ulong, GuildState> _outGetConfig;
 
         // TODO: How to clear the cache after a time? Can't hold on to this forever.
+        // TODO Do not store messages at all if features is disabled.
 
         public MessageCache(DiscordSocketClient client, AsyncLogger logger, Func<ulong, GuildState> getConfFunc)
         {
