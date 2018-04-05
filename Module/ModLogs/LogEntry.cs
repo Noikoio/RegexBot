@@ -11,9 +11,9 @@ namespace Noikoio.RegexBot.Module.ModLogs
     class LogEntry
     {
         readonly int _logId;
-        readonly DateTime _ts;
+        readonly DateTimeOffset _ts;
         readonly ulong _guildId;
-        readonly ulong? _invokeId;
+        readonly ulong _invokeId;
         readonly ulong _targetId;
         readonly ulong? _channelId;
         readonly LogType _type;
@@ -24,9 +24,9 @@ namespace Noikoio.RegexBot.Module.ModLogs
         /// </summary>
         public int Id => _logId;
         /// <summary>
-        /// Gets the timestamp (a <see cref="DateTime"/> with <see cref="DateTimeKind.Utc"/>) of the entry.
+        /// Gets the UTC timestamp of the entry.
         /// </summary>
-        public DateTime Timestamp => _ts;
+        public DateTimeOffset Timestamp => _ts;
         /// <summary>
         /// Gets the ID of the guild to which this log entry corresponds.
         /// </summary>
@@ -37,9 +37,10 @@ namespace Noikoio.RegexBot.Module.ModLogs
         public ulong Target => _targetId;
         /// <summary>
         /// Gets the ID of the invoking user.
-        /// This value exists only if this entry was created through action of another user that is not the target.
+        /// This value differs from <see cref="Target"/> if this entry was created through
+        /// action of another user, such as the issuer of notes and warnings.
         /// </summary>
-        public ulong? Invoker => _invokeId;
+        public ulong Invoker => _invokeId;
         /// <summary>
         /// Gets the guild channel ID to which this log entry corresponds, if any.
         /// </summary>
@@ -63,8 +64,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             {
                 _guildId = (ulong)r.GetInt64(2);
                 _targetId = (ulong)r.GetInt64(3);
-                if (r.IsDBNull(4)) _invokeId = null;
-                else _invokeId = (ulong)r.GetInt64(4);
+                _invokeId = (ulong)r.GetInt64(4);
                 if (r.IsDBNull(5)) _channelId = null;
                 else _channelId = (ulong)r.GetInt64(5);
             }
@@ -144,12 +144,14 @@ namespace Noikoio.RegexBot.Module.ModLogs
                         + "id int primary key, "
                         + "entry_ts timestamptz not null, "
                         + "guild_id bigint not null, "
-                        + "target_id bigint not null, "
-                        + $"invoke_id bigint null references {EntityCache.SqlHelper.TableUser}.user_id, "
-                        + "target_channel_id bigint null, " // TODO channel cache reference?
+                        + "target_id bigint not null, " // No foreign constraint: some targets may not be cached
+                        + "invoker_id bigint not null, "
+                        + "target_channel_id bigint null, "
                         + "entry_type integer not null, "
                         + "message text not null, "
-                        + $"FOREIGN KEY (target_id, guild_id) REFERENCES {EntityCache.SqlHelper.TableUser} (user_id, guild_id)";
+                        + $"FOREIGN KEY (invoker_id, guild_id) REFERENCES {EntityCache.SqlHelper.TableUser} (user_id, guild_id), "
+                        + $"FOREIGN KEY (target_channel_id, guild_id) REFERENCES {EntityCache.SqlHelper.TableTextChannel} (channel_id, guild_id)"
+                        + ")";
                     c.ExecuteNonQuery();
                 }
                 using (var c = db.CreateCommand())
@@ -162,7 +164,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
         }
 
         // Double-check constructor if making changes to this constant
-        const string QueryColumns = "id, entry_ts, guild_id, target_id, invoke_id, target_channel_id, entry_type, message";
+        const string QueryColumns = "id, entry_ts, guild_id, target_id, invoker_id, target_channel_id, entry_type, message";
         
         /// <summary>
         /// Attempts to look up a log entry by its ID.

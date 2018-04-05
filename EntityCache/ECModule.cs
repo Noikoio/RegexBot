@@ -13,8 +13,6 @@ namespace Noikoio.RegexBot.EntityCache
     /// </summary>
     class ECModule : BotModule
     {
-        private readonly DatabaseConfig _db;
-
         public ECModule(DiscordSocketClient client) : base(client)
         {
             if (RegexBot.Config.DatabaseAvailable)
@@ -26,13 +24,27 @@ namespace Noikoio.RegexBot.EntityCache
                 client.GuildMemberUpdated += Client_GuildMemberUpdated;
                 client.UserJoined += Client_UserJoined;
                 client.UserLeft += Client_UserLeft;
+                client.ChannelCreated += Client_ChannelCreated;
+                client.ChannelUpdated += Client_ChannelUpdated;
             }
             else
             {
                 Log("No database storage available.").Wait();
             }
         }
-        
+
+        private async Task Client_ChannelUpdated(SocketChannel arg1, SocketChannel arg2)
+        {
+            if (arg2 is SocketGuildChannel ch)
+                await SqlHelper.UpdateGuildChannelAsync(ch);
+        }
+
+        private async Task Client_ChannelCreated(SocketChannel arg)
+        {
+            if (arg is SocketGuildChannel ch)
+                await SqlHelper.UpdateGuildChannelAsync(ch);
+        }
+
         // Guild and guild member information has become available.
         // This is a very expensive operation, especially when joining larger guilds.
         private async Task Client_GuildAvailable(SocketGuild arg)
@@ -43,6 +55,7 @@ namespace Noikoio.RegexBot.EntityCache
                 {
                     await SqlHelper.UpdateGuildAsync(arg);
                     await SqlHelper.UpdateGuildMemberAsync(arg.Users);
+                    await SqlHelper.UpdateGuildChannelAsync(arg.Channels);
                 }
                 catch (NpgsqlException ex)
                 {

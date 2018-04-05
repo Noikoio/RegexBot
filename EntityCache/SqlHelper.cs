@@ -1,4 +1,5 @@
-﻿using Discord.WebSocket;
+﻿using Discord;
+using Discord.WebSocket;
 using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
@@ -40,11 +41,18 @@ namespace Noikoio.RegexBot.EntityCache
                 using (var c = db.CreateCommand())
                 {
                     c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableTextChannel + " ("
-                        + "channel_id bigint not null primary key, "
+                        + "channel_id bigint not null, "
                         + $"guild_id bigint not null references {TableGuild}, "
                         + "cache_date timestamptz not null, "
                         + "channel_name text not null"
                         + ")";
+                    await c.ExecuteNonQueryAsync();
+                }
+                using (var c = db.CreateCommand())
+                {
+                    // guild_id is a foreign key, and also one half of the primary key here
+                    c.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS "
+                        + $"{TableTextChannel}_ck_idx on {TableTextChannel} (channel_id, guild_id)";
                     await c.ExecuteNonQueryAsync();
                 }
                 // As of the time of this commit, Discord doesn't allow any uppercase characters
@@ -66,7 +74,7 @@ namespace Noikoio.RegexBot.EntityCache
                 }
                 using (var c = db.CreateCommand())
                 {
-                    // guild_id is a foreign key, and also one half of the primary key here
+                    // compound primary key
                     c.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS "
                         + $"{TableUser}_ck_idx on {TableUser} (user_id, guild_id)";
                     await c.ExecuteNonQueryAsync();
@@ -103,10 +111,7 @@ namespace Noikoio.RegexBot.EntityCache
         }
 
         internal static Task UpdateGuildMemberAsync(SocketGuildUser user)
-        {
-            var ml = new SocketGuildUser[] { user };
-            return UpdateGuildMemberAsync(ml);
-        }
+            => UpdateGuildMemberAsync(new SocketGuildUser[] { user });
         internal static async Task UpdateGuildMemberAsync(IEnumerable<SocketGuildUser> users)
         {
             var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
@@ -145,6 +150,41 @@ namespace Noikoio.RegexBot.EntityCache
                         url.Value = item.GetAvatarUrl();
                         if (url.Value == null) url.Value = DBNull.Value;
 
+                        await c.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+        }
+
+        internal static Task UpdateGuildChannelAsync(SocketGuildChannel channel)
+            => UpdateGuildChannelAsync(new SocketGuildChannel[] { channel });
+        internal static async Task UpdateGuildChannelAsync(IEnumerable<SocketGuildChannel> channels)
+        {
+            var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync();
+            if (db == null) return;
+            using (db)
+            {
+                using (var c = db.CreateCommand())
+                {
+                    c.CommandText = "INSERT INTO " + TableTextChannel
+                        + " (channel_id, guild_id, cache_date, channel_name)"
+                        + " VALUES (@Cid, @Gid, @Date, @Name) "
+                        + "ON CONFLICT (channel_id, guild_id) DO UPDATE SET "
+                        + "cache_date = EXCLUDED.cache_date, channel_name = EXCLUDED.channel_name";
+
+                    var cid = c.Parameters.Add("@Cid", NpgsqlDbType.Bigint);
+                    var gid = c.Parameters.Add("@Gid", NpgsqlDbType.Bigint);
+                    c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = DateTime.Now;
+                    var cname = c.Parameters.Add("@Name", NpgsqlDbType.Text);
+                    c.Prepare();
+
+                    foreach (var item in channels)
+                    {
+                        if (!(item is ITextChannel ich)) continue;
+
+                        cid.Value = item.Id;
+                        gid.Value = item.Guild.Id;
+                        cname.Value = item.Name;
                         await c.ExecuteNonQueryAsync();
                     }
                 }

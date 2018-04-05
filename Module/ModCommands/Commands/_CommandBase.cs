@@ -142,7 +142,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 
             try
             {
-                cdata = (await EntityCache.EntityCache.QueryAsync(guild, input))
+                cdata = (await EntityCache.EntityCache.QueryUserAsync(guild, input))
                     .FirstOrDefault();
                 if (cdata != null) uid = cdata.UserId;
             }
