@@ -139,7 +139,7 @@ namespace Noikoio.RegexBot.EntityCache
 
                     foreach (var item in users)
                     {
-                        if (item.IsBot || item.IsWebhook) continue;
+                        if (item.IsWebhook) continue;
 
                         uid.Value = item.Id;
                         gid.Value = item.Guild.Id;
