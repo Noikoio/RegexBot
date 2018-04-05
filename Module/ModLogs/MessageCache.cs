@@ -38,7 +38,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
         #region Event handling
         private async Task Client_MessageReceived(SocketMessage arg)
         {
-            if (arg.Author.IsBot) return;
+            if (arg.Author.IsWebhook) return;
+            if (arg.Channel is IDMChannel) return; // No DMs
 
             await AddOrUpdateCacheItemAsync(arg);
         }
@@ -46,13 +47,11 @@ namespace Noikoio.RegexBot.Module.ModLogs
         private async Task Client_MessageUpdated(
             Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel channel)
         {
-            if (after.Author.IsBot) return;
+            if (after.Author.IsWebhook) return;
 
             // We only want channel messages
             if (after is SocketUserMessage afterMsg && !(afterMsg is IDMChannel))
             {
-                if (after.Author.IsBot) return;
-
                 // We're not interested in all message updates, only those that leave a timestamp.
                 if (!afterMsg.EditedTimestamp.HasValue) return;
             }
@@ -88,11 +87,9 @@ namespace Noikoio.RegexBot.Module.ModLogs
             // Check if this feature is enabled before doing anything else.
             var cfg = _outGetConfig(guildId);
             if (cfg == null) return;
-            if (isDelete && (cfg.RptTypes & LogEntry.LogType.MsgDelete) == 0) return;
-            if (!isDelete && (cfg.RptTypes & LogEntry.LogType.MsgEdit) == 0) return;
-
-            // Ignore if it's a message being deleted withing the reporting channel.
-            if (isDelete && cfg.RptTarget.Value.Id.Value == ch.Id) return;
+            if (cfg.RptIgnore != 0 && ch.Id == cfg.RptIgnore) return; // ignored channel
+            if (isDelete && (cfg.RptTypes & LogEntry.LogType.MsgDelete) == 0) return; // not reporting deletions
+            if (!isDelete && (cfg.RptTypes & LogEntry.LogType.MsgEdit) == 0) return; // not reporting edits
 
             // Regardless of delete or edit, it is necessary to get the equivalent database information.
             EntityCache.CacheUser ucd = null;
@@ -131,16 +128,9 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 cacheMsg = "**Database error. See log.**";
             }
 
-            // Find target channel, prepare and send out message
-            var g = _dClient.GetGuild(guildId);
-            var rptTargetChannel = g?.GetTextChannel(cfg.RptTarget.Value.Id.Value);
-            if (rptTargetChannel == null)
-            {
-                await _outLog($"WARNING: Reporting channel {cfg.RptTarget.Value.ToString()} could not be determined.");
-                return;
-            }
+            // Prepare and send out message
             var em = CreateReportEmbed(isDelete, ucd, messageId, ch, (cacheMsg, editMsg));
-            await rptTargetChannel.SendMessageAsync("", embed: em);
+            await cfg.RptTarget.SendMessageAsync("", embeds: new Embed[] { em });
         }
 
         const int ReportCutoffLength = 500;
@@ -173,8 +163,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 Fields = new System.Collections.Generic.List<EmbedFieldBuilder>(),
                 Footer = new EmbedFooterBuilder()
                 {
-                    Text = "User ID: " + ucd?.UserId.ToString() ?? "Unknown",
-                    IconUrl = _dClient.CurrentUser.GetAvatarUrl()
+                    Text = "User ID: " + ucd?.UserId.ToString() ?? "Unknown"
                 },
                 Timestamp = DateTimeOffset.UtcNow
             };

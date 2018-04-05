@@ -8,7 +8,8 @@ Sample within a [server definition](serverdef.html):
 "ModLogs": {
 	"AutoReporting": {
 		"Channel": "#99999999:mod-events",
-		"Events": "msgedit,msgdelete"
+		"Events": "msgedit,msgdelete",
+		"CacheIgnore": 1230000000000
 	}
 }
 ```
@@ -24,9 +25,10 @@ The following values can be defined within the `ModLogs` object:
 As its name implies, the `AutoReporting` section allows the bot operator to configure automatic reporting of one or more events as they occur to a designated reporting channel. Omitting this section in configuration disables this function.
 
 The following values are accepted within this object:
-* Channel (*string*) - **Required.** The channel name in which to report events.
-  * The channel ID is currently required to be specified (see [EntityList](entitylist.html)). This limitation will be removed in a future update.
-* Events (*string*) - **Required** for now. A comma-separated list of event types to be sent to the reporting channel.
+* WebhookUrl (*string*) - **Required.** A webhook URL to be used by the bot for sending events.
+* Events (*string*) - **Required** at the moment. A comma-separated list of event types to be sent to the reporting channel.
+* CacheIgnore (*number*) - Channel (ID) to ignore for MsgEdit and MsgDelete autoreporting. (Optional.)
+  * It is **highly recommended** that the reporting channel be specified, otherwise deleting a report within it will cause another report to appear.
 
 #### Event types
 All events fall into one of a number of categories.

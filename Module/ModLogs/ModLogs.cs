@@ -40,8 +40,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             }
 
             var conf = new GuildState((JObject)configSection);
-            if (conf.RptTypes != LogEntry.LogType.None)
-                await Log("Enabled event autoreporting to " + conf.RptTarget);
+            if (conf.RptTypes != LogEntry.LogType.None) await Log("Enabled event autoreporting.");
 
             return conf;
         }

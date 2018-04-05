@@ -1,6 +1,9 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Discord;
+using Discord.Webhook;
+using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
+using System.Text.RegularExpressions;
 
 namespace Noikoio.RegexBot.Module.ModLogs
 {
@@ -10,16 +13,21 @@ namespace Noikoio.RegexBot.Module.ModLogs
     class GuildState
     {
         // Event reporting
-        private readonly EntityName _rptTarget;
+        private DiscordWebhookClient _rptTarget;
         private LogEntry.LogType _rptTypes;
+        private ulong _rptIgnore;
         /// <summary>
-        /// Target reporting channel.
+        /// Webhook for log reporting.
         /// </summary>
-        public EntityName? RptTarget => _rptTarget;
+        public DiscordWebhookClient RptTarget => _rptTarget;
         /// <summary>
         /// Event types to send to the reporting channel.
         /// </summary>
         public LogEntry.LogType RptTypes => _rptTypes;
+        /// <summary>
+        /// Channel for AutoReporting to ignore.
+        /// </summary>
+        public ulong RptIgnore => _rptIgnore;
 
         // Query command
         private readonly string _qCmd; // command name
@@ -45,19 +53,21 @@ namespace Noikoio.RegexBot.Module.ModLogs
             var arcfg = cfgRoot["AutoReporting"];
             if (arcfg == null)
             {
-                _rptTarget = default(EntityName); // NOTE: Change this if EntityName becomes a class later
+                _rptTarget = null;
                 _rptTypes = LogEntry.LogType.None;
+                _rptIgnore = 0;
             }
             else if (arcfg.Type == JTokenType.Object)
             {
-                string chval = arcfg["Channel"]?.Value<string>();
-                if (chval == null) throw new RuleImportException("Reporting channel is not defined.");
-                if (!string.IsNullOrWhiteSpace(chval) && chval[0] == '#')
-                    _rptTarget = new EntityName(chval.Substring(1, chval.Length-1), EntityType.Channel);
-                else
-                    throw new RuleImportException("Reporting channel is not properly defined.");
-                // Require the channel's ID for now.
-                if (!_rptTarget.Id.HasValue) throw new RuleImportException("Reporting channel's ID must be specified.");
+                string whurl = arcfg["WebhookUrl"]?.Value<string>();
+                if (whurl == null) throw new RuleImportException("Webhook URL for log reporting is not specified.");
+                var wrx = WebhookUrlParts.Match(whurl);
+                if (!wrx.Success) throw new RuleImportException("Webhook URL for log reporting is not valid.");
+                var wid = ulong.Parse(wrx.Groups[1].Value);
+                var wtk = wrx.Groups[2].Value;
+                _rptTarget = new DiscordWebhookClient(wid, wtk,
+                    new Discord.Rest.DiscordRestConfig() { DefaultRetryMode = RetryMode.RetryRatelimit });
+                // TODO figure out how to hook up the webhook client's log event
 
                 // TODO make optional
                 string rpval = arcfg["Events"]?.Value<string>();
@@ -68,6 +78,13 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 catch (ArgumentException ex)
                 {
                     throw new RuleImportException(ex.Message);
+                }
+
+                var ignoreId = arcfg["CacheIgnore"]?.Value<string>();
+                if (string.IsNullOrWhiteSpace(ignoreId)) _rptIgnore = 0;
+                else if (!ulong.TryParse(ignoreId, out _rptIgnore))
+                {
+                    throw new RuleImportException("CacheIgnore was not set to a valid channel ID.");
                 }
             }
             else
@@ -112,5 +129,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 throw new RuleImportException("Section for QueryCommand is not correctly defined.");
             }
         }
+
+        private static Regex WebhookUrlParts =
+            new Regex(@"https?:\/\/discordapp.com\/api\/webhooks\/(\d+)\/([^/]+)?", RegexOptions.Compiled);
     }
 }
