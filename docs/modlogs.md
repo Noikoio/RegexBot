@@ -7,7 +7,7 @@ Sample within a [server definition](serverdef.html):
 ```
 "ModLogs": {
 	"AutoReporting": {
-		"Channel": "#99999999:mod-events",
+		"WebhookUrl": "https://discordapp.com/api/webhooks/00000/example-aaa000",
 		"Events": "msgedit,msgdelete",
 		"CacheIgnore": 1230000000000
 	}
@@ -27,8 +27,8 @@ As its name implies, the `AutoReporting` section allows the bot operator to conf
 The following values are accepted within this object:
 * WebhookUrl (*string*) - **Required.** A webhook URL to be used by the bot for sending events.
 * Events (*string*) - **Required** at the moment. A comma-separated list of event types to be sent to the reporting channel.
-* CacheIgnore (*number*) - Channel (ID) to ignore for MsgEdit and MsgDelete autoreporting. (Optional.)
-  * It is **highly recommended** that the reporting channel be specified, otherwise deleting a report within it will cause another report to appear.
+* CacheIgnore (*number*) - Optional. The channel (ID only) in which to ignore reporting of MsgEdit and MsgDelete logs.
+  * It is **highly recommended** that the reporting channel be specified here, otherwise deleting a report within it will cause another report to appear in response.
 
 #### Event types
 All events fall into one of a number of categories.
