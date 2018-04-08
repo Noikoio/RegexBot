@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Discord;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModLogs
@@ -15,9 +17,12 @@ namespace Noikoio.RegexBot.Module.ModLogs
         readonly ulong _guildId;
         readonly ulong _invokeId;
         readonly ulong _targetId;
-        readonly ulong? _channelId;
+        readonly string _targetString;
         readonly LogType _type;
-        readonly string _message;
+        readonly string _content;
+
+        // lazy-loaded values:
+        private string _invokeName = null;
 
         /// <summary>
         /// Gets the ID value of this log entry.
@@ -34,54 +39,126 @@ namespace Noikoio.RegexBot.Module.ModLogs
         /// <summary>
         /// Gets the ID of the user to which this log entry corresponds.
         /// </summary>
-        public ulong Target => _targetId;
+        public ulong TargetId => _targetId;
         /// <summary>
-        /// Gets the ID of the invoking user.
-        /// This value differs from <see cref="Target"/> if this entry was created through
+        /// Gets the string containing the target's username and nickname, if applicable.
+        /// May be null.
+        /// </summary>
+        public string TargetString => _targetString;
+        /// <summary>
+        /// Gets the ID of the user that created this log entry.
+        /// This value differs from <see cref="TargetId"/> if this entry was created through
         /// action of another user, such as the issuer of notes and warnings.
         /// </summary>
-        public ulong Invoker => _invokeId;
+        public ulong InvokerId => _invokeId;
         /// <summary>
-        /// Gets the guild channel ID to which this log entry corresponds, if any.
+        /// Gets the string containing the invoker's username (not nickname).
+        /// This value is not stored in the log entry, but instead retrieved from EntityCache.
         /// </summary>
-        public ulong? TargetChannel => _channelId;
+        public string InvokerName {
+            get {
+                if (_invokeName == null)
+                {
+                    var c = EntityCache.EntityCache.QueryUserAsync(_guildId, _invokeId).GetAwaiter().GetResult();
+                    _invokeName = $"{c.Username}#{c.Discriminator}";
+                }
+                return _invokeName;
+            }
+        }
         /// <summary>
-        /// Gets this log entry's type.
+        /// Gets this log entry's type in numeric form.
         /// </summary>
         public LogType Type => _type;
+        
+        /// <summary>
+        /// Gets this log entry's type in string form.
+        /// </summary>
+        public string TypeName => Enum.GetName(typeof(LogType), _type);
         /// <summary>
         /// Gets the content of this log entry.
         /// </summary>
-        public string Message => _message;
+        public string Content => _content;
 
         public LogEntry(DbDataReader r)
         {
             // Double-check ordinals if making changes to QueryColumns
-
             _logId = r.GetInt32(0);
             _ts = r.GetDateTime(1).ToUniversalTime();
             unchecked
             {
                 _guildId = (ulong)r.GetInt64(2);
                 _targetId = (ulong)r.GetInt64(3);
-                _invokeId = (ulong)r.GetInt64(4);
-                if (r.IsDBNull(5)) _channelId = null;
-                else _channelId = (ulong)r.GetInt64(5);
+                if (r.IsDBNull(4)) _targetString = null;
+                else _targetString = r.GetString(4);
+                _invokeId = (ulong)r.GetInt64(5);
             }
             _type = (LogType)r.GetInt32(6);
-            _message = r.GetString(7);
+            _content = r.GetString(7);
         }
 
-        // TODO lazy loading of channel, user, etc from caches
-        // TODO methods for updating this log entry(?)
+        #region Output
+        /// <summary>
+        /// Log types in which the invoking user is a moderator.
+        /// </summary>
+        const LogType TypesWithModeratorInvoker = LogType.Ban | LogType.Warn | LogType.Note;
 
-        // TODO figure out some helper methods to retrieve data of other entities by ID, if it becomes necessary
+        /// <summary>
+        /// Returns an embed to be used either as a confirmation message or for auto-reporting.
+        /// </summary>
+        public Embed ToEmbed()
+        {
+            bool hasIssuer = (_type & TypesWithModeratorInvoker) != 0;
+            var result = new EmbedBuilder()
+            {
+                Footer = new EmbedFooterBuilder() { Text = $"Event {Id}: {TypeName}" },
+                Timestamp = this.Timestamp,
+                Title = $"{TypeName} {Id} - " + (hasIssuer ? "Issued by " : "From ") + InvokerName,
+                Color = new Color(0xffffff), // TODO color differentiation
+                Description = Content,
+                Fields = new List<EmbedFieldBuilder>()
+                {
+                    new EmbedFieldBuilder()
+                    {
+                        Name = "Context"
+                    }
+                }
+            };
+
+            // Context field changes depending on log type
+            string target = $"<@{TargetId}>";
+            if (TargetString != null) target = $"{TargetString} ({target})";
+            if (hasIssuer)
+            {
+                result.Fields[0].Value = $"**Username:** {target}\n"
+                    + $"**Moderator:** {InvokerName} (<@{InvokerId}>)";
+            }
+            else
+            {
+                result.Fields[0].Value = $"**Username:** {target}";
+            }
+
+            return result;
+        }
+        /// <summary>
+        /// Returns a plain string meant to be used as part of the result of a query.
+        /// </summary>
+        public string ToQueryResultString()
+        {
+            // remember to add spaces for indentation
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Returns a short string showing the log type and ID.
+        /// </summary>
+        public override string ToString() => $"{TypeName} {Id}";
+        #endregion
 
         #region Log entry types
         /// <summary>
         /// Enumeration of all possible event flags. Names will show themselves to users
         /// and associated values will be saved to the databaase.
-        /// Once they're included in a release build, they should never be changed again.
+        /// Once included in a release build, they should never be changed again.
         /// </summary>
         [Flags]
         public enum LogType
@@ -90,17 +167,16 @@ namespace Noikoio.RegexBot.Module.ModLogs
             None = 0x0,
             Note = 0x1,
             Warn = 0x2,
-            Kick = 0x4,
             Ban = 0x8,
             /// <summary>Record of a user joining a guild.</summary>
             JoinGuild = 0x10,
             /// <summary>Record of a user leaving a guild, voluntarily or by force (kick, ban).</summary>
             LeaveGuild = 0x20,
             NameChange = 0x40,
-            /// <summary>Not a database entry, but exists for MessageCache configuration.</summary>
-            MsgEdit = 0x80,
-            /// <summary>Not a database entry, but exists for MessageCache configuration.</summary>
-            MsgDelete = 0x100
+            /// <summary>Not a database entry, but valid for MessageCache configuration.</summary>
+            MsgEdit = 0x8000000,
+            /// <summary>Not a database entry, but valid for MessageCache configuration.</summary>
+            MsgDelete = 0x10000000
         }
 
         public static LogType GetLogTypeFromString(string input)
@@ -134,21 +210,22 @@ namespace Noikoio.RegexBot.Module.ModLogs
         public const string TblEntry = "modlogs_entries";
         public const string TblEntryIncr = TblEntry + "_id";
 
-        internal static void CreateTables()
+        internal static void CreateTable()
         {
             using (var db = RegexBot.Config.GetOpenDatabaseConnectionAsync().GetAwaiter().GetResult())
             {
                 using (var c = db.CreateCommand())
                 {
+                    // Double-check QueryColumns if making changes to this statement
                     c.CommandText = "CREATE TABLE IF NOT EXISTS " + TblEntry + " ("
-                        + "id int primary key, "
+                        + "entry_id int primary key, "
                         + "entry_ts timestamptz not null, "
                         + "guild_id bigint not null, "
                         + "target_id bigint not null, " // No foreign constraint: some targets may not be cached
+                        + "target_name text null," // some targets may have unknown names
                         + "invoker_id bigint not null, "
-                        + "target_channel_id bigint null, "
-                        + "entry_type integer not null, "
-                        + "message text not null, "
+                        + "log_type integer not null, "
+                        + "contents text not null, "
                         + $"FOREIGN KEY (invoker_id, guild_id) REFERENCES {EntityCache.SqlHelper.TableUser} (user_id, guild_id), "
                         + $"FOREIGN KEY (target_channel_id, guild_id) REFERENCES {EntityCache.SqlHelper.TableTextChannel} (channel_id, guild_id)"
                         + ")";
@@ -163,8 +240,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
             }
         }
 
-        // Double-check constructor if making changes to this constant
-        const string QueryColumns = "id, entry_ts, guild_id, target_id, invoker_id, target_channel_id, entry_type, message";
+        // Double-check CreateTables and the constructor if making changes to this constant
+        const string QueryColumns = "entry_id, entry_ts, guild_id, target_id, target_name, invoker_id, log_type, contents";
         
         /// <summary>
         /// Attempts to look up a log entry by its ID.
@@ -199,7 +276,6 @@ namespace Noikoio.RegexBot.Module.ModLogs
             (ulong guild,
             ulong? target = null,
             ulong? invoker = null,
-            ulong? channel = null,
             LogType? category = null)
         {
             // Enforce some limits - can't search too broadly here. Requires this at a minimum:
@@ -230,13 +306,6 @@ namespace Noikoio.RegexBot.Module.ModLogs
                         c.CommandText += " invoke_id = @InvokeId";
                         c.Parameters.Add("@InvokeId", NpgsqlTypes.NpgsqlDbType.Bigint).Value = invoker.Value;
                     }
-                    if (channel.HasValue)
-                    {
-                        if (and) c.CommandText += " AND";
-                        else and = true;
-                        c.CommandText += " target_channel_id = @ChannelId";
-                        c.Parameters.Add("@ChannelId", NpgsqlTypes.NpgsqlDbType.Bigint).Value = channel.Value;
-                    }
                     if (category.HasValue)
                     {
                         if (and) c.CommandText += " AND";
@@ -256,7 +325,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 }
             }
 
-            return result;
+            return result.AsReadOnly();
         }
         #endregion
     }

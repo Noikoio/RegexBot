@@ -21,7 +21,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             // MessageCache (reporting of MessageEdit, MessageDelete) handled by helper class
             _msgCacheInstance = new MessageCache(client, Log, delegate (ulong id) { return GetState<GuildState>(id); });
 
-            LogEntry.CreateTables();
+            LogEntry.CreateTable();
 
             // TODO add handlers for detecting joins, leaves, bans, kicks, user edits (nick/username/discr)
             // TODO add handler for processing the log query command
