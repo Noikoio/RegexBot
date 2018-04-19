@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Text.RegularExpressions;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.ModLogs
@@ -56,6 +56,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
         /// This value is not stored in the log entry, but instead retrieved from EntityCache.
         /// </summary>
         public string InvokerName {
+            // lazy-loaded
             get {
                 if (_invokeName == null)
                 {
@@ -66,7 +67,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             }
         }
         /// <summary>
-        /// Gets this log entry's type in numeric form.
+        /// Gets this log entry's type in enumerated form.
         /// </summary>
         public LogType Type => _type;
         
@@ -112,16 +113,10 @@ namespace Noikoio.RegexBot.Module.ModLogs
             {
                 Footer = new EmbedFooterBuilder() { Text = $"Event {Id}: {TypeName}" },
                 Timestamp = this.Timestamp,
-                Title = $"{TypeName} {Id} - " + (hasIssuer ? "Issued by " : "From ") + InvokerName,
+                Title = this.ToString(),
                 Color = new Color(0xffffff), // TODO color differentiation
                 Description = Content,
-                Fields = new List<EmbedFieldBuilder>()
-                {
-                    new EmbedFieldBuilder()
-                    {
-                        Name = "Context"
-                    }
-                }
+                Fields = new List<EmbedFieldBuilder>() { new EmbedFieldBuilder() { Name = "Context" } }
             };
 
             // Context field changes depending on log type
@@ -144,14 +139,48 @@ namespace Noikoio.RegexBot.Module.ModLogs
         /// </summary>
         public string ToQueryResultString()
         {
-            // remember to add spaces for indentation
-            throw new NotImplementedException();
+            var result = new StringBuilder();
+            result.AppendLine(this.ToString());
+            result.AppendLine($"    **Date:** {Timestamp:u}"); // TODO relative time on shorter timespans
+            if ((_type & TypesWithModeratorInvoker) != 0)
+            {
+                // Log type has a Target and Moderator
+                result.AppendLine("    **Target:** " + $"{TargetString} ({TargetId} <@{TargetId}>)");
+                result.AppendLine("    **Moderator:** " + $"{InvokerName} ({InvokerId} <{InvokerId}>)");
+            }
+            else
+            {
+                // Log type only has a user field
+                result.AppendLine("    **Username:** " + $"{TargetString} ({TargetId} <@{TargetId}>)");
+            }
+
+            foreach (var line in Content.Split(new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None))
+            {
+                result.AppendLine("    " + line);
+            }
+
+            return result.ToString();
         }
 
         /// <summary>
-        /// Returns a short string showing the log type and ID.
+        /// Returns a short summary of the log.
         /// </summary>
-        public override string ToString() => $"{TypeName} {Id}";
+        public override string ToString()
+        {
+            string result = "Case " + Id + ": ";
+
+            switch (Type)
+            {
+                case LogType.Ban: return result + $"{TargetString} banned by {InvokerName}";
+                case LogType.JoinGuild: return result + $"{TargetString} joined server";
+                case LogType.LeaveGuild: return result + $"{TargetString} left server";
+                case LogType.NameChange: return result + $"Nickname or username changed";
+                case LogType.None: return result + $"Note added for {TargetString} by {InvokerName}";
+                case LogType.Warn: return result + $"Warn for {TargetString} issued by {InvokerName}";
+            }
+
+            return result + $"{TypeName}";
+        }
         #endregion
 
         #region Log entry types
@@ -165,24 +194,28 @@ namespace Noikoio.RegexBot.Module.ModLogs
         {
             /// <summary>Should only be useful in GuildState and ignored elsewhere.</summary>
             None = 0x0,
+            /// <summary>Arbitrary text-based record issued by a moderator.</summary>
             Note = 0x1,
+            /// <summary>Arbitrary text-based record issued by a moderator.</summary>
             Warn = 0x2,
+            /// <summary>Record of a user having been issued a ban.</summary>
             Ban = 0x8,
             /// <summary>Record of a user joining a guild.</summary>
             JoinGuild = 0x10,
             /// <summary>Record of a user leaving a guild, voluntarily or by force (kick, ban).</summary>
             LeaveGuild = 0x20,
+            /// <summary>Record of a user changing their nickname and/or username.</summary>
             NameChange = 0x40,
             /// <summary>Not a database entry, but valid for MessageCache configuration.</summary>
-            MsgEdit = 0x8000000,
+            MsgEdit = 0x20000000,
             /// <summary>Not a database entry, but valid for MessageCache configuration.</summary>
-            MsgDelete = 0x10000000
+            MsgDelete = 0x40000000
         }
 
         public static LogType GetLogTypeFromString(string input)
         {
             if (string.IsNullOrWhiteSpace(input))
-                throw new ArgumentException("Types are not properly defined.");
+                throw new ArgumentException("Event log types have not been properly defined.");
 
             var strTypes = input.Split(
                 new char[] { ' ', ',', '/', '+' }, // and more?
@@ -223,7 +256,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                         + "guild_id bigint not null, "
                         + "target_id bigint not null, " // No foreign constraint: some targets may not be cached
                         + "target_name text null," // some targets may have unknown names
-                        + "invoker_id bigint not null, "
+                        + "invoker_id bigint not null, " // name must be known (foreign key constraint)
                         + "log_type integer not null, "
                         + "contents text not null, "
                         + $"FOREIGN KEY (invoker_id, guild_id) REFERENCES {EntityCache.SqlHelper.TableUser} (user_id, guild_id), "
