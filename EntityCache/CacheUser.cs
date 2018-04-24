@@ -16,7 +16,8 @@ namespace Noikoio.RegexBot.EntityCache
     {
         readonly ulong _userId;
         readonly ulong _guildId;
-        readonly DateTime _cacheDate;
+        readonly DateTimeOffset _cacheDate;
+        readonly DateTimeOffset _firstSeen;
         readonly string _username;
         readonly string _discriminator;
         readonly string _nickname;
@@ -33,7 +34,11 @@ namespace Noikoio.RegexBot.EntityCache
         /// <summary>
         /// Timestamp value for when this cache item was last updated, in universal time.
         /// </summary>
-        public DateTime CacheDate => _cacheDate;
+        public DateTimeOffset CacheDate => _cacheDate;
+        /// <summary>
+        /// Timestamp value for when this user was first seen by the bot, in universal time.
+        /// </summary>
+        public DateTimeOffset FirstSeenDate => _firstSeen;
 
         /// <summary>
         /// Display name, including discriminator. Shows the nickname, if available.
@@ -72,7 +77,7 @@ namespace Noikoio.RegexBot.EntityCache
         }
 
         // Double-check SqlHelper if making changes to this constant
-        const string QueryColumns = "user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url";
+        const string QueryColumns = "user_id, guild_id, first_seen, cache_date, username, discriminator, nickname, avatar_url";
         private CacheUser(DbDataReader r)
         {
             // Double-check ordinals if making changes to QueryColumns
@@ -82,11 +87,12 @@ namespace Noikoio.RegexBot.EntityCache
                 _userId = (ulong)r.GetInt64(0);
                 _guildId = (ulong)r.GetInt64(1);
             }
-            _cacheDate = r.GetDateTime(2).ToUniversalTime();
-            _username = r.GetString(3);
-            _discriminator = r.GetString(4);
-            _nickname = r.IsDBNull(5) ? null : r.GetString(5);
-            _avatarUrl = r.IsDBNull(6) ? null : r.GetString(6);
+            _firstSeen = r.GetDateTime(2).ToUniversalTime();
+            _cacheDate = r.GetDateTime(3).ToUniversalTime();
+            _username = r.GetString(4);
+            _discriminator = r.GetString(5);
+            _nickname = r.IsDBNull(6) ? null : r.GetString(6);
+            _avatarUrl = r.IsDBNull(7) ? null : r.GetString(7);
         }
 
         public override string ToString() => DisplayName;

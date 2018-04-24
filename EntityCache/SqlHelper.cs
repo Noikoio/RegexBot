@@ -64,6 +64,7 @@ namespace Noikoio.RegexBot.EntityCache
                     c.CommandText = "CREATE TABLE IF NOT EXISTS " + TableUser + " ("
                         + "user_id bigint not null, "
                         + $"guild_id bigint not null references {TableGuild}, "
+                        + "first_seen timestamptz not null default now(),"
                         + "cache_date timestamptz not null, "
                         + "username text not null, "
                         + "discriminator text not null, "
@@ -98,12 +99,11 @@ namespace Noikoio.RegexBot.EntityCache
                 using (var c = db.CreateCommand())
                 {
                     c.CommandText = "INSERT INTO " + TableGuild + " (guild_id, cache_date, current_name) "
-                        + "VALUES (@GuildId, @Date, @CurrentName) "
+                        + "VALUES (@GuildId, now(), @CurrentName) "
                         + "ON CONFLICT (guild_id) DO UPDATE SET "
                         + "current_name = EXCLUDED.current_name, cache_date = EXCLUDED.cache_date";
                     c.Parameters.Add("@GuildId", NpgsqlDbType.Bigint).Value = g.Id;
                     c.Parameters.Add("@CurrentName", NpgsqlDbType.Text).Value = g.Name;
-                    c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = DateTime.Now;
                     c.Prepare();
                     await c.ExecuteNonQueryAsync();
                 }
@@ -122,7 +122,7 @@ namespace Noikoio.RegexBot.EntityCache
                 {
                     c.CommandText = "INSERT INTO " + TableUser
                         + " (user_id, guild_id, cache_date, username, discriminator, nickname, avatar_url)"
-                        + " VALUES (@Uid, @Gid, @Date, @Uname, @Disc, @Nname, @Url) "
+                        + " VALUES (@Uid, @Gid, now(), @Uname, @Disc, @Nname, @Url) "
                         + "ON CONFLICT (user_id, guild_id) DO UPDATE SET "
                         + "cache_date = EXCLUDED.cache_date, username = EXCLUDED.username, "
                         + "discriminator = EXCLUDED.discriminator, " // I've seen someone's discriminator change this one time...
@@ -130,7 +130,6 @@ namespace Noikoio.RegexBot.EntityCache
 
                     var uid = c.Parameters.Add("@Uid", NpgsqlDbType.Bigint);
                     var gid = c.Parameters.Add("@Gid", NpgsqlDbType.Bigint);
-                    c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = DateTime.Now;
                     var uname = c.Parameters.Add("@Uname", NpgsqlDbType.Text);
                     var disc = c.Parameters.Add("@Disc", NpgsqlDbType.Text);
                     var nname = c.Parameters.Add("@Nname", NpgsqlDbType.Text);
@@ -168,13 +167,12 @@ namespace Noikoio.RegexBot.EntityCache
                 {
                     c.CommandText = "INSERT INTO " + TableTextChannel
                         + " (channel_id, guild_id, cache_date, channel_name)"
-                        + " VALUES (@Cid, @Gid, @Date, @Name) "
+                        + " VALUES (@Cid, @Gid, now(), @Name) "
                         + "ON CONFLICT (channel_id, guild_id) DO UPDATE SET "
                         + "cache_date = EXCLUDED.cache_date, channel_name = EXCLUDED.channel_name";
 
                     var cid = c.Parameters.Add("@Cid", NpgsqlDbType.Bigint);
                     var gid = c.Parameters.Add("@Gid", NpgsqlDbType.Bigint);
-                    c.Parameters.Add("@Date", NpgsqlDbType.TimestampTZ).Value = DateTime.Now;
                     var cname = c.Parameters.Add("@Name", NpgsqlDbType.Text);
                     c.Prepare();
 
