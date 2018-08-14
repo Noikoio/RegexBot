@@ -23,16 +23,21 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
             LogEntry.CreateTable();
 
-            // TODO add handlers for detecting joins, leaves, bans, kicks, user edits (nick/username/discr)
+            client.UserJoined += Client_UserJoined;
+            client.UserLeft += Client_UserLeft;
+            client.UserUpdated += Client_UserUpdated;
+            client.UserBanned += Client_UserBanned;
+            client.UserUnbanned += Client_UserUnbanned;
+            
             // TODO add handler for processing the log query command
         }
-        
+
         public override async Task<object> CreateInstanceState(JToken configSection)
         {
             if (configSection == null) return null;
             if (configSection.Type != JTokenType.Object)
                 throw new RuleImportException("Configuration for this section is invalid.");
-            
+
             if (!RegexBot.Config.DatabaseAvailable)
             {
                 await Log("Database access is not available. This module be unavailable.");
@@ -43,6 +48,31 @@ namespace Noikoio.RegexBot.Module.ModLogs
             if (conf.RptTypes != LogEntry.LogType.None) await Log("Enabled event autoreporting.");
 
             return conf;
+        }
+
+        private Task Client_UserJoined(SocketGuildUser arg)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        private Task Client_UserLeft(SocketGuildUser arg)
+        {
+            throw new System.NotImplementedException();
+        }
+        
+        private Task Client_UserUpdated(SocketUser arg1, SocketUser arg2)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        private Task Client_UserBanned(SocketUser arg1, SocketGuild arg2)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        private Task Client_UserUnbanned(SocketUser arg1, SocketGuild arg2)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }
