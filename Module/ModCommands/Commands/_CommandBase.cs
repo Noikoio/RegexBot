@@ -130,16 +130,18 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
         /// </returns>
         protected async Task<(ulong, EntityCache.CacheUser)> GetUserDataFromString(ulong guild, string input)
         {
-            ulong uid = 0;
+            ulong uid;
             EntityCache.CacheUser cdata = null;
 
+            // If input is a mention, isolate the ID value
             Match m = UserMention.Match(input);
-            if (m.Success)
-            {
-                input = m.Groups["snowflake"].Value;
-                uid = ulong.Parse(input);
-            }
+            if (m.Success) input = m.Groups["snowflake"].Value;
 
+            // Attempt to turn the input into a ulong
+            try { uid = ulong.Parse(input); }
+            catch (FormatException) { uid = 0; }
+
+            // EntityCache lookup
             try
             {
                 cdata = (await EntityCache.EntityCache.QueryUserAsync(guild, input))
