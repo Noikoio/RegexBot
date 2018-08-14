@@ -60,7 +60,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
             // Once an edited message is cached, the original message contents are lost.
             // This is the only time available to report it.
             await ProcessReportMessage(false, before.Id, channel, after.Content);
-            
+
             await AddOrUpdateCacheItemAsync(after);
         }
 
@@ -93,15 +93,17 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
             // Regardless of delete or edit, it is necessary to get the equivalent database information.
             EntityCache.CacheUser ucd = null;
-            ulong userId;
-            string cacheMsg;
+            ulong msgAuthorId;
+            string msgContent;
+            DateTimeOffset msgCreateTime;
+            DateTimeOffset? msgEditTime = null;
             try
             {
                 using (var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync())
                 {
                     using (var c = db.CreateCommand())
                     {
-                        c.CommandText = "SELECT author_id, message FROM " + TableMessage
+                        c.CommandText = "SELECT author_id, message, created_ts, edited_ts as msgtime FROM " + TableMessage
                             + " WHERE message_id = @MessageId";
                         c.Parameters.Add("@MessageId", NpgsqlDbType.Bigint).Value = messageId;
                         c.Prepare();
@@ -109,27 +111,33 @@ namespace Noikoio.RegexBot.Module.ModLogs
                         {
                             if (await r.ReadAsync())
                             {
-                                userId = unchecked((ulong)r.GetInt64(0));
-                                cacheMsg = r.GetString(1);
+                                msgAuthorId = unchecked((ulong)r.GetInt64(0));
+                                msgContent = r.GetString(1);
+                                msgCreateTime = r.GetDateTime(2).ToUniversalTime();
+                                if (r.IsDBNull(3)) msgEditTime = null;
+                                else msgEditTime = r.GetDateTime(3).ToUniversalTime();
                             }
                             else
                             {
-                                userId = 0;
-                                cacheMsg = "*(Message not in cache.)*";
+                                msgAuthorId = 0;
+                                msgContent = "*(Message not in cache.)*";
+                                msgCreateTime = DateTimeOffset.UtcNow;
+                                msgEditTime = null;
                             }
                         }
                     }
                 }
-                if (userId != 0) ucd = await EntityCache.EntityCache.QueryUserAsync(guildId, userId);
+                if (msgAuthorId != 0) ucd = await EntityCache.EntityCache.QueryUserAsync(guildId, msgAuthorId);
             }
             catch (NpgsqlException ex)
             {
                 await _outLog($"SQL error in {nameof(ProcessReportMessage)}: " + ex.Message);
-                cacheMsg = "**Database error. See log.**";
+                msgContent = "**Database error. See log.**";
+                msgCreateTime = DateTimeOffset.UtcNow;
             }
 
             // Prepare and send out message
-            var em = CreateReportEmbed(isDelete, ucd, messageId, ch, (cacheMsg, editMsg));
+            var em = CreateReportEmbed(isDelete, ucd, messageId, ch, (msgContent, editMsg), msgCreateTime, msgEditTime);
             await cfg.RptTarget.SendMessageAsync("", embeds: new Embed[] { em });
         }
 
@@ -138,7 +146,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
         private EmbedBuilder CreateReportEmbed(
             bool isDelete,
             EntityCache.CacheUser ucd, ulong messageId, ISocketMessageChannel chInfo,
-            (string, string) content) // Item1 = cached content. Item2 = after-edit message (null if isDelete)
+            (string, string) content, // Item1 = cached content. Item2 = post-edit message (null if isDelete)
+            DateTimeOffset msgCreated, DateTimeOffset? msgEdited)
         {
             string msgCached = content.Item1;
             string msgPostEdit = content.Item2;
@@ -195,7 +204,12 @@ namespace Noikoio.RegexBot.Module.ModLogs
             var context = new StringBuilder();
             if (ucd != null) context.AppendLine($"Username: <@!{ucd.UserId}>");
             context.AppendLine($"Channel: <#{chInfo.Id}> #{chInfo.Name}");
+            if (msgEdited.HasValue)
+                context.AppendLine($"Prior edit date: {MakeTimestampString(msgEdited.Value)}");
+            else
+                context.AppendLine($"Post date: {MakeTimestampString(msgCreated)}");
             context.Append($"Message ID: {messageId}");
+
             eb.Fields.Add(new EmbedFieldBuilder()
             {
                 Name = "Context",
@@ -203,6 +217,41 @@ namespace Noikoio.RegexBot.Module.ModLogs
             });
 
             return eb;
+        }
+
+        private string MakeTimestampString(DateTimeOffset time)
+        {
+            var result = new StringBuilder();
+            result.Append(time.ToString("yyyy-MM-dd hh:mm:ss"));
+
+            var now = DateTimeOffset.UtcNow;
+            var diff = now - time;
+            if (diff < new TimeSpan(3, 0, 0, 0))
+            {
+                // Difference less than 3 days. Generate relative time format.
+                result.Append(" - ");
+
+                if (diff.TotalSeconds < 60)
+                {
+                    // Under a minute ago. Show only seconds.
+                    result.Append((int)Math.Ceiling(diff.TotalSeconds) + "s ago");
+                }
+                else
+                {
+                    // over a minute. Show days, hours, minutes, seconds.
+                    var ts = (int)Math.Ceiling(diff.TotalSeconds);
+                    var m = (ts % 3600) / 60;
+                    var h = (ts % 86400) / 3600;
+                    var d = ts / 86400;
+
+                    if (d > 0) result.AppendFormat("{0}d{1}h{2}m", d, h, m);
+                    else if (h > 0) result.AppendFormat("{0}h{1}m", h, m);
+                    else result.AppendFormat("{0}m", m);
+                    result.Append(" ago");
+                }
+            }
+
+            return result.ToString();
         }
         #endregion
 
@@ -263,7 +312,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 await _outLog($"SQL error in {nameof(AddOrUpdateCacheItemAsync)}: " + ex.Message);
             }
         }
-        
+
         private async Task<string> GetCachedMessageAsync(ulong messageId)
         {
             try
