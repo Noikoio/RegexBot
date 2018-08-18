@@ -26,6 +26,7 @@ namespace Noikoio.RegexBot.Module.VoiceRoleSync
             // Gather data.
             if (!(argUser is SocketGuildUser user)) return; // not a guild user
             var settings = GetState<GuildSettings>(user.Guild.Id);
+            if (settings == null) return; // not enabled here
             var deafened = after.IsDeafened || after.IsSelfDeafened;
             var (settingBefore, settingAfter) = settings.GetChannelSettings(before.VoiceChannel, after.VoiceChannel);
 

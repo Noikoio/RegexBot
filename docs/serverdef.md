@@ -31,3 +31,4 @@ The following is a list of accepted members within a server definition.
 * [EntryAutoRole](entryautorole.html) - See respective page.
 * [ModCommands](modcommands.html) - See respective page.
 * [ModLogs](modlogs.html) - See respective page.
+* [VoiceRoleSync](voicerolesync.html) - See respective page.
