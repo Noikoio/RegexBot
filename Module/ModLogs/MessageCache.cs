@@ -161,6 +161,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
                 msgPostEdit = string.Format(ReportCutoffNotify, ReportCutoffLength)
                     + content.Item2.Substring(0, ReportCutoffLength);
             }
+            if (string.IsNullOrEmpty(msgCached)) msgCached = "[blank message]";
+            if (string.IsNullOrEmpty(msgPostEdit)) msgPostEdit = "[blank message]";
 
             // Note: Value for ucb can be null if cached user could not be determined.
             var eb = new EmbedBuilder
@@ -281,6 +283,23 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
         private async Task AddOrUpdateCacheItemAsync(SocketMessage msg)
         {
+            // Insert attachment file names into cache
+            // Doing this only here causes this information to appear only in database results.
+            // That is, message deletions and pre-edits.
+            var dbinsert = new StringBuilder();
+            if (msg.Attachments.Count > 0)
+            {
+                dbinsert.Append("[Attached: ");
+                foreach (var item in msg.Attachments)
+                {
+                    dbinsert.Append(item.Filename);
+                    dbinsert.Append(", ");
+                }
+                dbinsert.Length -= 2;
+                dbinsert.AppendLine("]");
+            }
+            dbinsert.Append(msg.Content);
+
             try
             {
                 using (var db = await RegexBot.Config.GetOpenDatabaseConnectionAsync())
@@ -301,7 +320,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
                             c.Parameters.Add("@Edit", NpgsqlDbType.TimestampTZ).Value = msg.EditedTimestamp.Value;
                         else
                             c.Parameters.Add("@Edit", NpgsqlDbType.TimestampTZ).Value = DBNull.Value;
-                        c.Parameters.Add("@Message", NpgsqlDbType.Text).Value = msg.Content;
+                        c.Parameters.Add("@Message", NpgsqlDbType.Text).Value = dbinsert.ToString();
                         c.Prepare();
                         await c.ExecuteNonQueryAsync();
                     }
