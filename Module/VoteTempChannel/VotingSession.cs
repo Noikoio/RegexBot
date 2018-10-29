@@ -4,19 +4,18 @@ using System.Collections.Generic;
 namespace Noikoio.RegexBot.Module.VoteTempChannel
 {
     /// <summary>
-    /// Keeps information on voting sessions and voting cooldowns.
+    /// Keeps information on voting sessions and cooldowns.
     /// </summary>
     class VotingSession
     {
         private Configuration _conf;
         private DateTimeOffset _initialVoteTime;
         private List<ulong> _votes;
-
-        public DateTimeOffset? CooldownStart { get; private set; }
+        public DateTimeOffset? _cooldownStart;
 
         public VotingSession()
         {
-            CooldownStart = null;
+            _cooldownStart = null;
             _votes = new List<ulong>();
         }
 
@@ -35,7 +34,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
 
         /// <summary>
         /// Checks if the voting session has expired.
-        /// To be called by the background task. This automatically resets state.
+        /// To be called by the background task. This automatically resets and sets cooldown.
         /// </summary>
         public bool IsSessionExpired()
         {
@@ -52,13 +51,13 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
 
         public void StartCooldown()
         {
-            CooldownStart = DateTimeOffset.UtcNow;
+            _cooldownStart = DateTimeOffset.UtcNow;
         }
 
         public bool IsInCooldown()
         {
-            if (!CooldownStart.HasValue) return false;
-            return CooldownStart.Value + _conf.VotingCooldown > DateTimeOffset.UtcNow;
+            if (!_cooldownStart.HasValue) return false;
+            return _cooldownStart.Value + _conf.VotingCooldown > DateTimeOffset.UtcNow;
         }
 
         /// <summary>
@@ -67,7 +66,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         public void Reset()
         {
             _votes.Clear();
-            CooldownStart = null;
+            _cooldownStart = null;
         }
     }
 }
