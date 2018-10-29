@@ -10,132 +10,22 @@ using System.Threading.Tasks;
 namespace Noikoio.RegexBot.Module.VoteTempChannel
 {
     /// <summary>
-    /// "Entry point" for VoteTempChannel feature.
-    /// Handles activation command depending on guild state. Also holds information on
-    /// temporary channels currently active.
+    /// Enables users to vote for the creation of a temporary channel.
+    /// Deletes the channel after a set period of inactivity.
     /// </summary>
     class VoteTempChannel : BotModule
     {
         Task _backgroundWorker;
         CancellationTokenSource _backgroundWorkerCancel;
-        ChannelManager _chMgr;
-        internal VoteStore _votes;
 
         public VoteTempChannel(DiscordSocketClient client) : base(client)
         {
-            _chMgr = new ChannelManager(this, client);
-            _votes = new VoteStore();
-
-            client.JoinedGuild += GuildEnter;
-            client.GuildAvailable += GuildEnter;
-            client.LeftGuild += GuildLeave;
-            client.MessageReceived += Client_MessageReceived;
+            client.MessageReceived += VoteChecking;
+            client.MessageReceived += TemporaryChannelActivityCheck;
 
             _backgroundWorkerCancel = new CancellationTokenSource();
             _backgroundWorker = Task.Factory.StartNew(BackgroundCheckingTask, _backgroundWorkerCancel.Token,
                 TaskCreationOptions.LongRunning, TaskScheduler.Default);
-        }
-        
-        private async Task GuildEnter(SocketGuild arg)
-        {
-            var conf = GetState<Configuration>(arg.Id);
-            if (conf != null) await _chMgr.RecheckExpiryInformation(arg, conf);
-        }
-
-        private Task GuildLeave(SocketGuild arg)
-        {
-            _chMgr.DropCacheEntry(arg);
-            return Task.CompletedTask;
-        }
-
-        // Handles all vote logic
-        private async Task Client_MessageReceived(SocketMessage arg)
-        {
-            if (arg.Author.IsBot) return;
-            if (arg.Channel is IDMChannel) return;
-            var guild = (arg.Channel as SocketTextChannel)?.Guild;
-            if (guild == null) return;
-            var conf = GetConfig(guild.Id);
-            if (conf == null) return;
-
-            if (!arg.Content.StartsWith(conf.VoteCommand, StringComparison.InvariantCultureIgnoreCase)) return;
-
-            var voteResult = _votes.AddVote(guild.Id, arg.Author.Id, out int voteCount);
-            if (voteResult == VoteStatus.FailCooldown)
-            {
-                await arg.Channel.SendMessageAsync(":x: Cooldown in effect. Try again later.");
-                return;
-            }
-
-            const string VoteError = ":x: You have already placed your vote.";
-
-            if (_chMgr.HasExistingTemporaryChannel(guild, conf))
-            {
-                // Ignore votes not coming from the temporary channel itself.
-                if (!string.Equals(arg.Channel.Name, conf.TempChannelName, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    _votes.DelVote(guild.Id, arg.Author.Id);
-                    return;
-                }
-                if (voteResult == VoteStatus.FailVotedAlready)
-                {
-                    await arg.Channel.SendMessageAsync(VoteError);
-                    return;
-                }
-                await HandleVote_TempChannelExists(arg, guild, conf, voteCount);
-            }
-            else
-            {
-                if (voteResult == VoteStatus.FailVotedAlready)
-                {
-                    await arg.Channel.SendMessageAsync(VoteError);
-                    return;
-                }
-                await HandleVote_TempChannelNotExists(arg, guild, conf, voteCount);
-            }
-        }
-
-        private async Task HandleVote_TempChannelNotExists(SocketMessage arg, SocketGuild guild, Configuration conf, int voteCount)
-        {
-            bool threshold = voteCount >= conf.VotePassThreshold;
-            RestTextChannel newCh = null;
-
-            if (threshold)
-            {
-                newCh = await _chMgr.CreateChannelAndEntryAsync(guild, conf);
-                _votes.ClearVotes(guild.Id);
-            }
-
-            await arg.Channel.SendMessageAsync(":white_check_mark: Channel creation vote has been counted."
-                + (threshold ? $"\n<#{newCh.Id}> is now available!" : ""));
-            if (newCh != null)
-                await newCh.SendMessageAsync($"Welcome to <#{newCh.Id}>!"
-                    + "\nPlease note that this channel is temporary and *will* be deleted at a later time.");
-        }
-
-        private async Task HandleVote_TempChannelExists(SocketMessage arg, SocketGuild guild, Configuration conf, int voteCount)
-        {
-            // It's been checked that the incoming message originated from the temporary channel itself before coming here.
-            if (!_chMgr.IsUpForRenewal(guild, conf))
-            {
-                // TODO consider changing 'renewal' to 'extension' in other references, because the word makes more sense
-                if (conf.ChannelExtendDuration != TimeSpan.Zero)
-                    await arg.Channel.SendMessageAsync(":x: Cannot currently vote for a time extension. Try again later.");
-                else
-                    await arg.Channel.SendMessageAsync(":x: This channel's duration may not be extended.");
-                _votes.ClearVotes(guild.Id);
-                return;
-            }
-
-            bool threshold = voteCount >= conf.VotePassThreshold;
-            if (threshold)
-            {
-                _votes.ClearVotes(guild.Id);
-                await _chMgr.ExtendChannelExpirationAsync(guild, conf);
-            }
-
-            await arg.Channel.SendMessageAsync(":white_check_mark: Extension vote has been counted."
-                + (threshold ? "\nThis channel's duration has been extended." : ""));
         }
 
         public override Task<object> CreateInstanceState(JToken configSection)
@@ -146,6 +36,103 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                 return Task.FromResult<object>(new GuildInformation((JObject)configSection));
             }
             throw new RuleImportException("Configuration not of a valid type.");
+        }
+
+        /// <summary>
+        /// Listens for voting commands.
+        /// </summary>
+        private async Task VoteChecking(SocketMessage arg)
+        {
+            if (arg.Author.IsBot) return;
+            var guild = (arg.Channel as SocketTextChannel)?.Guild;
+            if (guild == null) return;
+            var conf = GetState<GuildInformation>(guild.Id);
+            if (conf == null) return;
+
+            // Only check the designated voting channel
+            if (!string.Equals(arg.Channel.Name, conf.Config.VotingChannel,
+                StringComparison.InvariantCultureIgnoreCase)) return;
+
+            // Check if command invoked
+            if (!arg.Content.StartsWith(conf.Config.VoteCommand, StringComparison.InvariantCultureIgnoreCase)) return;
+
+            // Check if we're accepting votes. Locking here; background task may be using this.
+            bool cooldown;
+            bool voteCounted = false;
+            string newChannelName = null;
+            lock (conf)
+            {
+                if (conf.GetTemporaryChannel(guild) != null) return; // channel exists, nothing to vote for
+                cooldown = conf.Voting.IsInCooldown();
+                if (!cooldown)
+                {
+                    voteCounted = conf.Voting.AddVote(arg.Author.Id, out var voteCount);
+                    if (voteCount >= conf.Config.VotePassThreshold)
+                    {
+                        newChannelName = conf.Config.TempChannelName;
+                    }
+                }
+
+                // Prepare new temporary channel while we're still locking state
+                if (newChannelName != null) conf.TempChannelLastActivity = DateTime.UtcNow;
+            }
+
+            if (cooldown)
+            {
+                await arg.Channel.SendMessageAsync(":x: Cooldown in effect. Try again later.");
+                return;
+            }
+            if (!voteCounted)
+            {
+                await arg.Channel.SendMessageAsync(":x: You have already voted.");
+                return;
+            }
+            
+            if (newChannelName != null)
+            {
+                RestTextChannel newCh;
+                try
+                {
+                    newCh = await guild.CreateTextChannelAsync(newChannelName);
+                }
+                catch (Discord.Net.HttpException ex)
+                {
+                    await Log($"Failed to create temporary channel: {ex.Message}");
+                    await arg.Channel.SendMessageAsync(":x: Failed to create new channel! Notify the bot operator.");
+                    return;
+                }
+
+                await newCh.SendMessageAsync($"Welcome to <#{newCh.Id}>!"
+                        + "\nBe aware that this channel is temporary and **will** be deleted later.");
+                newChannelName = newCh.Id.ToString(); // For use in the confirmation message
+            }
+
+            await arg.Channel.SendMessageAsync(":white_check_mark: Channel creation vote has been counted."
+                    + (newChannelName != null ? $"\n<#{newChannelName}> has been created!" : ""));
+        }
+        
+        /// <summary>
+        /// Listens for any message sent to the temporary channel.
+        /// Updates the corresponding internal value.
+        /// </summary>
+        private Task TemporaryChannelActivityCheck(SocketMessage arg)
+        {
+            if (arg.Author.IsBot) return Task.CompletedTask;
+            var guild = (arg.Channel as SocketTextChannel)?.Guild;
+            if (guild == null) return Task.CompletedTask;
+            var conf = GetState<GuildInformation>(guild.Id);
+            if (conf == null) return Task.CompletedTask;
+
+            lock (conf)
+            {
+                var tch = conf.GetTemporaryChannel(guild);
+                if (arg.Channel.Name == tch.Name)
+                {
+                    conf.TempChannelLastActivity = DateTimeOffset.UtcNow;
+                }
+            }
+
+            return Task.CompletedTask;
         }
 
         #region Background tasks

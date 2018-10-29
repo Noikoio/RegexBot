@@ -23,12 +23,17 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         /// Counts a user vote.
         /// </summary>
         /// <returns>False if the user already has a vote counted.</returns>
-        public bool AddVote(ulong id)
+        public bool AddVote(ulong id, out int voteCount)
         {
             // Mark the start of a new session, if applicable.
             if (_votes.Count == 0) _initialVoteTime = DateTimeOffset.UtcNow;
-            if (_votes.Contains(id)) return false;
+            if (_votes.Contains(id))
+            {
+                voteCount = -1;
+                return false;
+            }
             _votes.Add(id);
+            voteCount = _votes.Count;
             return true;
         }
 
