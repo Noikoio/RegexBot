@@ -5,16 +5,17 @@ using System.Text.RegularExpressions;
 
 namespace Noikoio.RegexBot.Module.VoteTempChannel
 {
-    class GuildConfiguration
+    class Configuration
     {
         public string VoteCommand { get; }
         public string TempChannelName { get; }
         public TimeSpan ChannelBaseDuration { get; }
         public TimeSpan ChannelExtendDuration { get; }
-        public TimeSpan KeepaliveVoteDuration { get; }
         public int VotePassThreshold { get; }
+        public TimeSpan VotingDuration { get; }
+        public TimeSpan VotingCooldown { get; }
 
-        public GuildConfiguration(JObject j)
+        public Configuration(JObject j)
         {
             VoteCommand = j["VoteCommand"]?.Value<string>();
             if (string.IsNullOrWhiteSpace(VoteCommand))
@@ -39,7 +40,8 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
 
             ChannelBaseDuration = ParseTimeConfig(j, "ChannelBaseDuration");
             ChannelExtendDuration = ParseTimeConfig(j, "ChannelExtendDuration");
-            KeepaliveVoteDuration = ParseTimeConfig(j, "KeepaliveVoteDuration");
+            VotingDuration = ParseTimeConfig(j, "VotingDuration");
+            VotingCooldown = ParseTimeConfig(j, "VotingCooldown");
         }
 
         private TimeSpan ParseTimeConfig(JObject conf, string valueName)
