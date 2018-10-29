@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Noikoio.RegexBot.Module.VoteTempChannel
@@ -15,6 +16,8 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
     /// </summary>
     class VoteTempChannel : BotModule
     {
+        Task _backgroundWorker;
+        CancellationTokenSource _backgroundWorkerCancel;
         ChannelManager _chMgr;
         internal VoteStore _votes;
 
@@ -27,11 +30,15 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             client.GuildAvailable += GuildEnter;
             client.LeftGuild += GuildLeave;
             client.MessageReceived += Client_MessageReceived;
+
+            _backgroundWorkerCancel = new CancellationTokenSource();
+            _backgroundWorker = Task.Factory.StartNew(BackgroundCheckingTask, _backgroundWorkerCancel.Token,
+                TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
         
         private async Task GuildEnter(SocketGuild arg)
         {
-            var conf = GetState<GuildConfiguration>(arg.Id);
+            var conf = GetState<Configuration>(arg.Id);
             if (conf != null) await _chMgr.RecheckExpiryInformation(arg, conf);
         }
 
@@ -88,7 +95,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             }
         }
 
-        private async Task HandleVote_TempChannelNotExists(SocketMessage arg, SocketGuild guild, GuildConfiguration conf, int voteCount)
+        private async Task HandleVote_TempChannelNotExists(SocketMessage arg, SocketGuild guild, Configuration conf, int voteCount)
         {
             bool threshold = voteCount >= conf.VotePassThreshold;
             RestTextChannel newCh = null;
@@ -106,7 +113,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                     + "\nPlease note that this channel is temporary and *will* be deleted at a later time.");
         }
 
-        private async Task HandleVote_TempChannelExists(SocketMessage arg, SocketGuild guild, GuildConfiguration conf, int voteCount)
+        private async Task HandleVote_TempChannelExists(SocketMessage arg, SocketGuild guild, Configuration conf, int voteCount)
         {
             // It's been checked that the incoming message originated from the temporary channel itself before coming here.
             if (!_chMgr.IsUpForRenewal(guild, conf))
@@ -136,15 +143,83 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             if (configSection == null) return Task.FromResult<object>(null);
             if (configSection.Type == JTokenType.Object)
             {
-                return Task.FromResult<object>(new GuildConfiguration((JObject)configSection));
+                return Task.FromResult<object>(new GuildInformation((JObject)configSection));
             }
             throw new RuleImportException("Configuration not of a valid type.");
         }
 
+        #region Background tasks
         /// <summary>
-        /// Publicly accessible method for fetching config. Used by <see cref="ChannelManager"/>.
+        /// Two functions: Removes expired channels, and announces expired votes.
         /// </summary>
-        public GuildConfiguration GetConfig(ulong guildId) => GetState<GuildConfiguration>(guildId);
-        // TODO check if used ^. attempt to not use.
+        private async Task BackgroundCheckingTask()
+        {
+            while (!_backgroundWorkerCancel.IsCancellationRequested)
+            {
+                try { await Task.Delay(12000, _backgroundWorkerCancel.Token); }
+                catch (TaskCanceledException) { return; }
+                
+                foreach (var g in Client.Guilds)
+                {
+                    try
+                    {
+                        var conf = GetState<GuildInformation>(g.Id);
+                        if (conf == null) continue;
+
+                        await BackgroundTempChannelExpiryCheck(g, conf);
+                        await BackgroundVoteSessionExpiryCheck(g, conf);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log("Unhandled exception in background task when processing a single guild.").Wait();
+                        Log(ex.ToString()).Wait();
+                    }
+                }
+            }
+        }
+
+        private async Task BackgroundTempChannelExpiryCheck(SocketGuild g, GuildInformation conf)
+        {
+            SocketGuildChannel ch = null;
+            lock (conf)
+            {
+                ch = conf.GetTemporaryChannel(g);
+                if (ch == null) return; // No temporary channel. Nothing to do.
+                if (!conf.IsTempChannelExpired()) return;
+
+                // If we got this far, the channel's expiring. Start the voting cooldown.
+                conf.Voting.StartCooldown();
+            }
+            await ch.DeleteAsync();
+        }
+
+        private async Task BackgroundVoteSessionExpiryCheck(SocketGuild g, GuildInformation conf)
+        {
+            bool act;
+            string nameTest;
+            lock (conf) {
+                act = conf.Voting.IsSessionExpired();
+                nameTest = conf.Config.VotingChannel;
+            }
+
+            if (!act) return;
+            // Determine the voting channel; will send announcement there.
+            SocketTextChannel outCh = null;
+            foreach (var ch in g.TextChannels)
+            {
+                if (string.Equals(ch.Name, nameTest, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    outCh = ch;
+                    break;
+                }
+            }
+            if (outCh == null)
+            {
+                // Huh. Bad config?
+                return;
+            }
+            await outCh.SendMessageAsync(":x: Not enough votes were placed for channel creation.");
+        }
+        #endregion
     }
 }
