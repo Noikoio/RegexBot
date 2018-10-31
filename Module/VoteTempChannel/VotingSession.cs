@@ -13,8 +13,9 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         private List<ulong> _votes;
         public DateTimeOffset? _cooldownStart;
 
-        public VotingSession()
+        public VotingSession(Configuration conf)
         {
+            _conf = conf;
             _cooldownStart = null;
             _votes = new List<ulong>();
         }

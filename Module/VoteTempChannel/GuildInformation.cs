@@ -25,7 +25,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             TempChannelLastActivity = DateTimeOffset.UtcNow;
 
             Config = new Configuration(conf);
-            Voting = new VotingSession();
+            Voting = new VotingSession(Config);
         }
 
         public SocketTextChannel GetTemporaryChannel(SocketGuild guild)

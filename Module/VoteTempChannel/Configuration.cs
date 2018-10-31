@@ -8,9 +8,26 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
     class Configuration
     {
         /// <summary>
+        /// Channel name in which voting takes place.
+        /// </summary>
+        public string VoteChannel { get; }
+        /// <summary>
         /// Command used to vote for the channel's creation.
         /// </summary>
         public string VoteCommand { get; }
+        /// <summary>
+        /// Number of votes needed to create the channel.
+        /// </summary>
+        public int VotePassThreshold { get; }
+        /// <summary>
+        /// Amount of time that a voting session can last starting from its initial vote.
+        /// </summary>
+        public TimeSpan VotingDuration { get; }
+        /// <summary>
+        /// Amount of time to wait before another vote may be initiated, either after a failed vote
+        /// or from expiration of the temporary channel.
+        /// </summary>
+        public TimeSpan VotingCooldown { get; }
 
         /// <summary>
         /// Name of the temporary channel, without prefix.
@@ -22,27 +39,6 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         /// </summary>
         public TimeSpan ChannelDuration { get; }
 
-        /// <summary>
-        /// Number of votes needed to create the channel.
-        /// </summary>
-        public int VotePassThreshold { get; }
-
-        /// <summary>
-        /// Amount of time that a voting session can last starting from its initial vote.
-        /// </summary>
-        public TimeSpan VotingDuration { get; }
-
-        /// <summary>
-        /// Amount of time to wait before another vote may be initiated, either after a failed vote
-        /// or from expiration of the temporary channel.
-        /// </summary>
-        public TimeSpan VotingCooldown { get; }
-
-        /// <summary>
-        /// Channel name in which voting takes place.
-        /// </summary>
-        public string VotingChannel { get; }
-
         public Configuration(JObject j)
         {
             VoteCommand = j["VoteCommand"]?.Value<string>();
@@ -52,7 +48,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                 throw new RuleImportException("'VoteCommand' must not contain spaces.");
 
             TempChannelName = ParseChannelNameConfig(j, "TempChannelName");
-            VotingChannel = ParseChannelNameConfig(j, "VotingChannel");
+            VoteChannel = ParseChannelNameConfig(j, "VoteChannel");
 
             var vptProp = j["VotePassThreshold"];
             if (vptProp == null)
@@ -70,10 +66,10 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
 
         private string ParseChannelNameConfig(JObject conf, string valueName)
         {
-            var value = j[valueName]?.Value<string>();
+            var value = conf[valueName]?.Value<string>();
             if (string.IsNullOrWhiteSpace(value))
                 throw new RuleImportException($"'{valueName}' must be specified.");
-            if (!Regex.IsMatch(TempChannelName, @"^([A-Za-z0-9]|[-_ ])+$"))
+            if (!Regex.IsMatch(value, @"^([A-Za-z0-9]|[-_ ])+$"))
                 throw new RuleImportException($"'{valueName}' contains one or more invalid characters.");
             return value;
         }

@@ -1,5 +1,4 @@
-﻿using Discord;
-using Discord.Rest;
+﻿using Discord.Rest;
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
@@ -46,35 +45,35 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             if (arg.Author.IsBot) return;
             var guild = (arg.Channel as SocketTextChannel)?.Guild;
             if (guild == null) return;
-            var conf = GetState<GuildInformation>(guild.Id);
-            if (conf == null) return;
+            var info = GetState<GuildInformation>(guild.Id);
+            if (info == null) return;
 
             // Only check the designated voting channel
-            if (!string.Equals(arg.Channel.Name, conf.Config.VotingChannel,
+            if (!string.Equals(arg.Channel.Name, info.Config.VoteChannel,
                 StringComparison.InvariantCultureIgnoreCase)) return;
 
             // Check if command invoked
-            if (!arg.Content.StartsWith(conf.Config.VoteCommand, StringComparison.InvariantCultureIgnoreCase)) return;
+            if (!arg.Content.StartsWith(info.Config.VoteCommand, StringComparison.InvariantCultureIgnoreCase)) return;
 
             // Check if we're accepting votes. Locking here; background task may be using this.
             bool cooldown;
             bool voteCounted = false;
             string newChannelName = null;
-            lock (conf)
+            lock (info)
             {
-                if (conf.GetTemporaryChannel(guild) != null) return; // channel exists, nothing to vote for
-                cooldown = conf.Voting.IsInCooldown();
+                if (info.GetTemporaryChannel(guild) != null) return; // channel exists, nothing to vote for
+                cooldown = info.Voting.IsInCooldown();
                 if (!cooldown)
                 {
-                    voteCounted = conf.Voting.AddVote(arg.Author.Id, out var voteCount);
-                    if (voteCount >= conf.Config.VotePassThreshold)
+                    voteCounted = info.Voting.AddVote(arg.Author.Id, out var voteCount);
+                    if (voteCount >= info.Config.VotePassThreshold)
                     {
-                        newChannelName = conf.Config.TempChannelName;
+                        newChannelName = info.Config.TempChannelName;
                     }
                 }
 
                 // Prepare new temporary channel while we're still locking state
-                if (newChannelName != null) conf.TempChannelLastActivity = DateTime.UtcNow;
+                if (newChannelName != null) info.TempChannelLastActivity = DateTime.UtcNow;
             }
 
             if (cooldown)
@@ -120,15 +119,16 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             if (arg.Author.IsBot) return Task.CompletedTask;
             var guild = (arg.Channel as SocketTextChannel)?.Guild;
             if (guild == null) return Task.CompletedTask;
-            var conf = GetState<GuildInformation>(guild.Id);
-            if (conf == null) return Task.CompletedTask;
+            var info = GetState<GuildInformation>(guild.Id);
+            if (info == null) return Task.CompletedTask;
 
-            lock (conf)
+            lock (info)
             {
-                var tch = conf.GetTemporaryChannel(guild);
+                var tch = info.GetTemporaryChannel(guild);
+                if (tch == null) return Task.CompletedTask;
                 if (arg.Channel.Name == tch.Name)
                 {
-                    conf.TempChannelLastActivity = DateTimeOffset.UtcNow;
+                    info.TempChannelLastActivity = DateTimeOffset.UtcNow;
                 }
             }
 
@@ -150,11 +150,11 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                 {
                     try
                     {
-                        var conf = GetState<GuildInformation>(g.Id);
-                        if (conf == null) continue;
+                        var info = GetState<GuildInformation>(g.Id);
+                        if (info == null) continue;
 
-                        await BackgroundTempChannelExpiryCheck(g, conf);
-                        await BackgroundVoteSessionExpiryCheck(g, conf);
+                        await BackgroundTempChannelExpiryCheck(g, info);
+                        await BackgroundVoteSessionExpiryCheck(g, info);
                     }
                     catch (Exception ex)
                     {
@@ -165,28 +165,28 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             }
         }
 
-        private async Task BackgroundTempChannelExpiryCheck(SocketGuild g, GuildInformation conf)
+        private async Task BackgroundTempChannelExpiryCheck(SocketGuild g, GuildInformation info)
         {
             SocketGuildChannel ch = null;
-            lock (conf)
+            lock (info)
             {
-                ch = conf.GetTemporaryChannel(g);
+                ch = info.GetTemporaryChannel(g);
                 if (ch == null) return; // No temporary channel. Nothing to do.
-                if (!conf.IsTempChannelExpired()) return;
+                if (!info.IsTempChannelExpired()) return;
 
                 // If we got this far, the channel's expiring. Start the voting cooldown.
-                conf.Voting.StartCooldown();
+                info.Voting.StartCooldown();
             }
             await ch.DeleteAsync();
         }
 
-        private async Task BackgroundVoteSessionExpiryCheck(SocketGuild g, GuildInformation conf)
+        private async Task BackgroundVoteSessionExpiryCheck(SocketGuild g, GuildInformation info)
         {
             bool act;
             string nameTest;
-            lock (conf) {
-                act = conf.Voting.IsSessionExpired();
-                nameTest = conf.Config.VotingChannel;
+            lock (info) {
+                act = info.Voting.IsSessionExpired();
+                nameTest = info.Config.VoteChannel;
             }
 
             if (!act) return;
