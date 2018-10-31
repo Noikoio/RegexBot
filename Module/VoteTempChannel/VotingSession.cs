@@ -39,6 +39,15 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         }
 
         /// <summary>
+        /// Reports if this session is awaiting its first vote.
+        /// </summary>
+        public bool AwaitingInitialVote()
+        {
+            if (IsInCooldown()) return false;
+            return _votes.Count == 0;
+        }
+
+        /// <summary>
         /// Checks if the voting session has expired.
         /// To be called by the background task. This automatically resets and sets cooldown.
         /// </summary>

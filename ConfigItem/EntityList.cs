@@ -123,5 +123,13 @@ namespace Noikoio.RegexBot.ConfigItem
             // No match.
             return false;
         }
+
+        /// <summary>
+        /// Determines if this is an empty list.
+        /// </summary>
+        public bool IsEmpty()
+        {
+            return Channels.Count() + Roles.Count() + Users.Count() == 0;
+        }
     }
 }

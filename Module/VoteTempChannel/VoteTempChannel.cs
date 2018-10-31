@@ -55,13 +55,21 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             // Check if command invoked
             if (!arg.Content.StartsWith(info.Config.VoteCommand, StringComparison.InvariantCultureIgnoreCase)) return;
 
-            // Check if we're accepting votes. Locking here; background task may be using this.
+            // Check if we're accepting votes. Locking here; other tasks may alter this data.
             bool cooldown;
             bool voteCounted = false;
             string newChannelName = null;
             lock (info)
             {
-                if (info.GetTemporaryChannel(guild) != null) return; // channel exists, nothing to vote for
+                if (info.GetTemporaryChannel(guild) != null) return; // channel exists, do nothing
+
+                if (info.Voting.AwaitingInitialVote())
+                {
+                    // Vote not in effect. Ignore those not allowed to initiate a vote (if configured).
+                    if (!info.Config.VoteStarters.IsEmpty() &&
+                        !info.Config.VoteStarters.ExistsInList(arg)) return;
+                }
+
                 cooldown = info.Voting.IsInCooldown();
                 if (!cooldown)
                 {
@@ -72,7 +80,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                     }
                 }
 
-                // Prepare new temporary channel while we're still locking state
+                // Prepare new temporary channel while we're still locking
                 if (newChannelName != null) info.TempChannelLastActivity = DateTime.UtcNow;
             }
 
@@ -105,7 +113,6 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                         + "\nBe aware that this channel is temporary and **will** be deleted later.");
                 newChannelName = newCh.Id.ToString(); // For use in the confirmation message
             }
-
             await arg.Channel.SendMessageAsync(":white_check_mark: Channel creation vote has been counted."
                     + (newChannelName != null ? $"\n<#{newChannelName}> has been created!" : ""));
         }

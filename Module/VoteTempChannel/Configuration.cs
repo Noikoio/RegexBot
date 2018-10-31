@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Noikoio.RegexBot.Module.VoteTempChannel
@@ -39,6 +40,12 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         /// </summary>
         public TimeSpan ChannelDuration { get; }
 
+        /// <summary>
+        /// Entities that are allowed to cast the initial vote.
+        /// An empty list allows anyone to initiate a vote.
+        /// </summary>
+        public EntityList VoteStarters { get; }
+
         public Configuration(JObject j)
         {
             VoteCommand = j["VoteCommand"]?.Value<string>();
@@ -62,6 +69,9 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             ChannelDuration = ParseTimeConfig(j, "ChannelDuration");
             VotingDuration = ParseTimeConfig(j, "VotingDuration");
             VotingCooldown = ParseTimeConfig(j, "VotingCooldown");
+
+            VoteStarters = new EntityList(j["VoteStarters"]);
+            // Accepts empty lists.
         }
 
         private string ParseChannelNameConfig(JObject conf, string valueName)
