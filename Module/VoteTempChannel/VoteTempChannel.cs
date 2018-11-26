@@ -58,6 +58,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             // Check if we're accepting votes. Locking here; other tasks may alter this data.
             bool cooldown;
             bool voteCounted = false;
+            bool voteIsInitial = false;
             string newChannelName = null;
             lock (info)
             {
@@ -74,14 +75,20 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                 if (!cooldown)
                 {
                     voteCounted = info.Voting.AddVote(arg.Author.Id, out var voteCount);
+                    voteIsInitial = voteCount == 1;
                     if (voteCount >= info.Config.VotePassThreshold)
                     {
+                        // Non-null value in newChannelName signals vote success
                         newChannelName = info.Config.TempChannelName;
                     }
                 }
 
-                // Prepare new temporary channel while we're still locking
-                if (newChannelName != null) info.TempChannelLastActivity = DateTime.UtcNow;
+                // Prepare some stuff while we're still in the lock
+                if (newChannelName != null)
+                {
+                    info.TempChannelLastActivity = DateTime.UtcNow;
+                    info.Voting.Reset();
+                }
             }
 
             if (cooldown)
@@ -113,8 +120,12 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                         + "\nBe aware that this channel is temporary and **will** be deleted later.");
                 newChannelName = newCh.Id.ToString(); // For use in the confirmation message
             }
-            await arg.Channel.SendMessageAsync(":white_check_mark: Channel creation vote has been counted."
-                    + (newChannelName != null ? $"\n<#{newChannelName}> has been created!" : ""));
+            if (voteIsInitial && newChannelName == null)
+                await arg.Channel.SendMessageAsync($":white_check_mark: {arg.Author.Mention} has initiated a vote! " +
+                    "Others may now vote to confirm creation of the new channel.");
+            else
+                await arg.Channel.SendMessageAsync(":white_check_mark: Channel creation vote has been counted."
+                    + (newChannelName != null ? $"\n<#{newChannelName}> is now active!" : ""));
         }
         
         /// <summary>
@@ -194,6 +205,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             lock (info) {
                 act = info.Voting.IsSessionExpired();
                 nameTest = info.Config.VoteChannel;
+                if (act) info.Voting.StartCooldown();
             }
 
             if (!act) return;
