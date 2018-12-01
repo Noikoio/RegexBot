@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Noikoio.RegexBot.Module.VoteTempChannel
@@ -61,10 +60,10 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             if (vptProp == null)
                 throw new RuleImportException("'VotePassThreshold' must be specified.");
             if (vptProp.Type != JTokenType.Integer)
-                throw new NotImplementedException("'VotePassThreshold' must be an integer.");
+                throw new RuleImportException("'VotePassThreshold' must be an integer.");
             VotePassThreshold = vptProp.Value<int>();
             if (VotePassThreshold <= 0)
-                throw new NotImplementedException("'VotePassThreshold' must be greater than zero.");
+                throw new RuleImportException("'VotePassThreshold' must be greater than zero.");
 
             ChannelDuration = ParseTimeConfig(j, "ChannelDuration");
             VotingDuration = ParseTimeConfig(j, "VotingDuration");
