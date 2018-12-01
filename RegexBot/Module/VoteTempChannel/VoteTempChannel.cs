@@ -1,8 +1,11 @@
-﻿using Discord.Rest;
+﻿using Discord;
+using Discord.Rest;
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using Noikoio.RegexBot.ConfigItem;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -59,7 +62,8 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             bool cooldown;
             bool voteCounted = false;
             bool voteIsInitial = false;
-            string newChannelName = null;
+            string voteCountString = null;
+            bool voteThresholdReached = false;
             lock (info)
             {
                 if (info.GetTemporaryChannel(guild) != null) return; // channel exists, do nothing
@@ -76,15 +80,12 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                 {
                     voteCounted = info.Voting.AddVote(arg.Author.Id, out var voteCount);
                     voteIsInitial = voteCount == 1;
-                    if (voteCount >= info.Config.VotePassThreshold)
-                    {
-                        // Non-null value in newChannelName signals vote success
-                        newChannelName = info.Config.TempChannelName;
-                    }
+                    voteCountString = $"(Votes: {voteCount}/{info.Config.VotePassThreshold})";
+                    voteThresholdReached = voteCount >= info.Config.VotePassThreshold;
                 }
 
-                // Prepare some stuff while we're still in the lock
-                if (newChannelName != null)
+                // Fix some data needed by the new channel while we're still here.
+                if (voteThresholdReached)
                 {
                     info.TempChannelLastActivity = DateTime.UtcNow;
                     info.Voting.Reset();
@@ -101,13 +102,14 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                 await arg.Channel.SendMessageAsync(":x: You have already voted.");
                 return;
             }
-            
-            if (newChannelName != null)
+
+            ulong newChannelId = 0; // value used in confirmation message
+            if (voteThresholdReached)
             {
-                RestTextChannel newCh;
+                RestTextChannel newChannel;
                 try
                 {
-                    newCh = await guild.CreateTextChannelAsync(newChannelName);
+                    newChannel = await CreateTemporaryChannel(guild, info);
                 }
                 catch (Discord.Net.HttpException ex)
                 {
@@ -116,18 +118,112 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                     return;
                 }
 
-                await newCh.SendMessageAsync($"Welcome to <#{newCh.Id}>!"
+                await newChannel.SendMessageAsync($"Welcome to <#{newChannel.Id}>!"
                         + "\nBe aware that this channel is temporary and **will** be deleted later.");
-                newChannelName = newCh.Id.ToString(); // For use in the confirmation message
+                newChannelId = newChannel.Id;
             }
-            if (voteIsInitial && newChannelName == null)
-                await arg.Channel.SendMessageAsync($":white_check_mark: {arg.Author.Mention} has initiated a vote! " +
-                    "Others may now vote to confirm creation of the new channel.");
+            if (voteIsInitial && !voteThresholdReached)
+                await arg.Channel.SendMessageAsync($":white_check_mark: {arg.Author.Mention} has initiated a vote!\n" +
+                    $"Vote now to confirm creation of the new channel {voteCountString}.");
             else
-                await arg.Channel.SendMessageAsync(":white_check_mark: Channel creation vote has been counted."
-                    + (newChannelName != null ? $"\n<#{newChannelName}> is now active!" : ""));
+                await arg.Channel.SendMessageAsync(
+                    $":white_check_mark: Channel creation vote has been counted {voteCountString}."
+                    + (newChannelId != 0 ? $" <#{newChannelId}> is now available!" : ""));
         }
-        
+
+        /// <summary>
+        /// Helper method for VoteChecking. Does actual channel creation processing.
+        /// </summary>
+        private async Task<RestTextChannel> CreateTemporaryChannel(SocketGuild g, GuildInformation info)
+        {
+            // Yep, we're locking again.
+            string newChannelName;
+            EntityList newChannelModlist;
+            lock (info)
+            {
+                newChannelName = info.Config.TempChannelName;
+                newChannelModlist = info.Config.VoteStarters;
+            }
+
+            var newChannel = await g.CreateTextChannelAsync(newChannelName); // exceptions here are handled by caller
+
+            /*
+             * Here we attempt to set permissions on the temporary channel. We will attempt all items within
+             * the Roles and Users sections of the EntityList. Roles that are above us will not be processed
+             * with the assumption that they already have permissions anyway. Individual users will be assigned
+             * channel overrides.
+             */
+
+            if (!newChannelModlist.IsEmpty())
+            {
+                await newChannel.SendMessageAsync("Applying permissions...");
+            }
+            foreach (var item in newChannelModlist.Roles)
+            {
+                // Evaluate role from data
+                SocketRole r = null;
+                if (item.Id.HasValue) r = g.GetRole(item.Id.Value);
+                if (r == null && item.Name != null)
+                {
+                    r = g.Roles.FirstOrDefault(gr => string.Equals(gr.Name, item.Name, StringComparison.OrdinalIgnoreCase));
+                }
+                if (r == null)
+                {
+                    await newChannel.SendMessageAsync($"Unable to find role `{item.ToString()}` to apply permissions.");
+                    continue;
+                }
+
+                try
+                {
+                    await newChannel.AddPermissionOverwriteAsync(r, new OverwritePermissions(
+                        manageChannel: PermValue.Allow,
+                        sendMessages: PermValue.Allow,
+                        manageMessages: PermValue.Allow,
+                        managePermissions: PermValue.Allow));
+                }
+                catch (Discord.Net.HttpException ex)
+                {
+                    // TODO what error code are we looking for here? adjust to pick up only that.
+                    // TODO clean up the error message display. users don't want to see the gory details.
+                    await newChannel.SendMessageAsync($":x: Unable to set on `{r.Name}`: {ex.Message}");
+                }
+            }
+            foreach (var item in newChannelModlist.Users)
+            {
+                // Evaluate user from data
+                SocketUser u = null;
+                if (item.Id.HasValue) u = g.GetUser(item.Id.Value);
+                if (u == null && item.Name != null)
+                {
+                    u = g.Users.FirstOrDefault(gu => string.Equals(gu.Username, item.Name, StringComparison.OrdinalIgnoreCase));
+                }
+                if (u == null)
+                {
+                    await newChannel.SendMessageAsync($"Unable to find user `{item.ToString()}` to apply permissions.");
+                    continue;
+                }
+
+                try
+                {
+                    await newChannel.AddPermissionOverwriteAsync(u, new OverwritePermissions(
+                        manageChannel: PermValue.Allow,
+                        sendMessages: PermValue.Allow,
+                        manageMessages: PermValue.Allow,
+                        managePermissions: PermValue.Allow));
+                }
+                catch (Discord.Net.HttpException ex)
+                {
+                    // TODO same as above. which code do we want to catch specifically?
+                    await newChannel.SendMessageAsync($":x: Unable to set on `{u.Username}`: {ex.Message}");
+                }
+            }
+            if (!newChannelModlist.IsEmpty())
+            {
+                await newChannel.SendMessageAsync("Permission application process has completed.");
+            }
+            return newChannel;
+        }
+
         /// <summary>
         /// Listens for any message sent to the temporary channel.
         /// Updates the corresponding internal value.
@@ -155,7 +251,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
 
         #region Background tasks
         /// <summary>
-        /// Two functions: Removes expired channels, and announces expired votes.
+        /// Two functions: Removes expired channels, announces expired votes.
         /// </summary>
         private async Task BackgroundCheckingTask()
         {
