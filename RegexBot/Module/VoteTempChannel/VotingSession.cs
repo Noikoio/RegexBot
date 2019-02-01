@@ -48,6 +48,11 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         }
 
         /// <summary>
+        /// Returns the list of users who issued a vote.
+        /// </summary>
+        public IEnumerable<ulong> VoterList => _votes;
+
+        /// <summary>
         /// Checks if the voting session has expired.
         /// To be called by the background task. This automatically resets and sets cooldown.
         /// </summary>
@@ -80,7 +85,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         /// </summary>
         public void Reset()
         {
-            _votes.Clear();
+            _votes = new List<ulong>();
             _cooldownStart = null;
         }
     }

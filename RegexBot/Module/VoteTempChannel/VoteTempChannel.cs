@@ -64,6 +64,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             bool voteIsInitial = false;
             string voteCountString = null;
             bool voteThresholdReached = false;
+            IEnumerable<ulong> finalVoters = null; // used only after channel creation
             lock (info)
             {
                 if (info.GetTemporaryChannel(guild) != null) return; // channel exists, do nothing
@@ -88,6 +89,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                 if (voteThresholdReached)
                 {
                     info.TempChannelLastActivity = DateTime.UtcNow;
+                    finalVoters = info.Voting.VoterList;
                     info.Voting.Reset();
                 }
             }
@@ -120,6 +122,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
 
                 await newChannel.SendMessageAsync($"Welcome to <#{newChannel.Id}>!"
                         + "\nBe aware that this channel is temporary and **will** be deleted later.");
+                await SendVoterList(guild, newChannel, finalVoters);
                 newChannelId = newChannel.Id;
             }
             if (voteIsInitial && !voteThresholdReached)
@@ -154,10 +157,6 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
              * channel overrides.
              */
 
-            if (!newChannelModlist.IsEmpty())
-            {
-                await newChannel.SendMessageAsync("Applying permissions...");
-            }
             foreach (var item in newChannelModlist.Roles)
             {
                 // Evaluate role from data
@@ -217,11 +216,28 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                     await newChannel.SendMessageAsync($":x: Unable to set on `{u.Username}`: {ex.Message}");
                 }
             }
-            if (!newChannelModlist.IsEmpty())
-            {
-                await newChannel.SendMessageAsync("Permission application process has completed.");
-            }
             return newChannel;
+        }
+
+        private async Task SendVoterList(SocketGuild g, RestTextChannel ch, IEnumerable<ulong> voters)
+        {
+            var names = new System.Text.StringBuilder();
+            foreach (var item in voters)
+            {
+                var u = g.GetUser(item);
+                if (u == null)
+                {
+                    names.AppendLine("Unknown user with ID " + item);
+                }
+                else
+                {
+                    names.Append(u.Username + "#" + u.Discriminator);
+                    if (u.Nickname != null) names.Append(" (" + u.Nickname + ")");
+                    names.AppendLine();
+                }
+            }
+
+            await ch.SendMessageAsync("Persons who voted to create this channel:\n" + names.ToString());
         }
 
         /// <summary>
@@ -259,7 +275,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
             {
                 try { await Task.Delay(12000, _backgroundWorkerCancel.Token); }
                 catch (TaskCanceledException) { return; }
-                
+
                 foreach (var g in Client.Guilds)
                 {
                     try
@@ -298,7 +314,8 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
         {
             bool act;
             string nameTest;
-            lock (info) {
+            lock (info)
+            {
                 act = info.Voting.IsSessionExpired();
                 nameTest = info.Config.VoteChannel;
                 if (act) info.Voting.StartCooldown();
