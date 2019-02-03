@@ -15,28 +15,24 @@ namespace Noikoio.RegexBot.Module.AutoRespond
         public enum ResponseType { None, Exec, Reply }
         private static Random ChangeRng = new Random();
 
-        string _label;
-        IEnumerable<Regex> _regex;
         ResponseType _rtype;
         string _rbody;
-        private FilterList _filter;
-        private RateLimitCache _limit;
         private double _random;
 
-        public string Label => _label;
-        public IEnumerable<Regex> Regex => _regex;
+        public string Label { get; }
+        public IEnumerable<Regex> Regex { get; }
         public (ResponseType, string) Response => (_rtype, _rbody);
-        public FilterList Filter => _filter;
-        public RateLimitCache RateLimit => _limit;
+        public FilterList Filter { get; }
+        public RateLimitCache RateLimit { get; }
         public double RandomChance => _random;
 
         public ConfigItem(JProperty definition)
         {
-            _label = definition.Name;
+            Label = definition.Name;
             var data = (JObject)definition.Value;
 
             // error postfix string
-            string errorpfx = $" in response definition for '{_label}'.";
+            string errorpfx = $" in response definition for '{Label}'.";
 
             // regex trigger
             const string NoRegexError = "No regular expression patterns are defined";
@@ -74,7 +70,7 @@ namespace Noikoio.RegexBot.Module.AutoRespond
                         $"Failed to parse regular expression pattern '{rxstr}'{errorpfx}");
                 }
             }
-            _regex = regexes.ToArray();
+            Regex = regexes.ToArray();
 
             // response - defined in either "exec" or "reply", but not both
             _rbody = null;
@@ -103,19 +99,19 @@ namespace Noikoio.RegexBot.Module.AutoRespond
             // ---
 
             // whitelist/blacklist filtering
-            _filter = new FilterList(data);
+            Filter = new FilterList(data);
 
             // rate limiting
             string rlstr = data["ratelimit"]?.Value<string>();
             if (string.IsNullOrWhiteSpace(rlstr))
             {
-                _limit = new RateLimitCache(RateLimitCache.DefaultTimeout);
+                RateLimit = new RateLimitCache(RateLimitCache.DefaultTimeout);
             }
             else
             {
-                if (ushort.TryParse(rlstr, out var rlval))
+                if (uint.TryParse(rlstr, out var rlval))
                 {
-                    _limit = new RateLimitCache(rlval);
+                    RateLimit = new RateLimitCache(rlval);
                 }
                 else
                 {

@@ -9,18 +9,16 @@ namespace Noikoio.RegexBot.Module.AutoRespond
     class RateLimitCache
     {
         public const ushort DefaultTimeout = 20; // this is Skeeter's fault
-
-        private readonly ushort _timeout;
         private Dictionary<ulong, DateTime> _cache;
 
-        public ushort Timeout => _timeout;
+        public uint Timeout { get; }
 
         /// <summary>
         /// Sets up a new instance of <see cref="RateLimitCache"/>.
         /// </summary>
-        public RateLimitCache(ushort timeout)
+        public RateLimitCache(uint timeout)
         {
-            _timeout = timeout;
+            Timeout = timeout;
             _cache = new Dictionary<ulong, DateTime>();
         }
 
@@ -32,7 +30,7 @@ namespace Noikoio.RegexBot.Module.AutoRespond
         /// <returns>True on success. False if the given ID already exists.</returns>
         public bool AllowUsage(ulong id)
         {
-            if (_timeout == 0) return true;
+            if (Timeout == 0) return true;
 
             lock (this)
             {
