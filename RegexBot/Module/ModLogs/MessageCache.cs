@@ -278,6 +278,14 @@ namespace Noikoio.RegexBot.Module.ModLogs
                         + ")";
                     c.ExecuteNonQuery();
                 }
+
+                // For lack of an automated mechanism, delete old messages on startup here.
+                using (var c = db.CreateCommand())
+                {
+                    c.CommandText = "DELETE FROM " + TableMessage + " WHERE " +
+                        "coalesce(edited_ts, created_ts) < (now() - interval '90 days')";
+                    c.ExecuteNonQuery();
+                }
             }
         }
 
