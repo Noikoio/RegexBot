@@ -38,7 +38,8 @@ namespace Noikoio.RegexBot.Module.VoiceRoleSync
                 {
                     // Replace roles only if the roles to be applied are different.
                     if (settingBefore != null && user.Roles.Contains(settingBefore)) await user.RemoveRoleAsync(settingBefore);
-                    if (settingAfter != null && !user.Roles.Contains(settingAfter)) await user.AddRoleAsync(settingAfter);
+                    if (settingAfter != null && !user.Roles.Contains(settingAfter) &&
+                        (after.IsDeafened || after.IsSelfDeafened)) await user.AddRoleAsync(settingAfter);
                 }
             }
             else
