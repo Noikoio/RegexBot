@@ -95,7 +95,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
 
         #region Helper methods and common values
         protected static readonly Regex UserMention = new Regex(@"<@!?(?<snowflake>\d+)>", RegexOptions.Compiled);
-        protected static readonly Regex RoleMention = new Regex(@"<@&(?<snowflake>\d+)>", RegexOptions.Compiled);
+        protected static readonly Regex RoleMention = new Regex(@"<@?&(?<snowflake>\d+)>", RegexOptions.Compiled);
         protected static readonly Regex ChannelMention = new Regex(@"<#(?<snowflake>\d+)>", RegexOptions.Compiled);
         protected static readonly Regex EmojiMatch = new Regex(@"<:(?<name>[A-Za-z0-9_]{2,}):(?<ID>\d+)>", RegexOptions.Compiled);
         protected const string Fail403 = "I do not have the required permissions to perform that action.";
