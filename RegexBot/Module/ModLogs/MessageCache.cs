@@ -121,7 +121,8 @@ namespace Noikoio.RegexBot.Module.ModLogs
                             {
                                 msgAuthorId = 0;
                                 msgContent = "*(Message not in cache.)*";
-                                msgCreateTime = DateTimeOffset.UtcNow;
+                                // Get timestamp from snowflake
+                                msgCreateTime = DateTimeOffset.FromUnixTimeMilliseconds((long)(messageId >> 22) + 1420070400000);
                                 msgEditTime = null;
                             }
                         }
