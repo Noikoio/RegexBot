@@ -118,7 +118,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 Title = "Usage",
                 Description = DefaultUsageMsg
             };
-            await target.SendMessageAsync(message ?? "", embed: usageEmbed);
+            await target.SendMessageAsync(message ?? "", embed: usageEmbed.Build());
         }
 
         /// <summary>

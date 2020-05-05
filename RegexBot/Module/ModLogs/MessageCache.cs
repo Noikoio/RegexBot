@@ -139,7 +139,7 @@ namespace Noikoio.RegexBot.Module.ModLogs
 
             // Prepare and send out message
             var em = CreateReportEmbed(isDelete, ucd, messageId, ch, (msgContent, editMsg), msgCreateTime, msgEditTime);
-            await cfg.RptTarget.SendMessageAsync("", embeds: new Embed[] { em });
+            await cfg.RptTarget.SendMessageAsync("", embeds: new Embed[] { em.Build() });
         }
 
         const int ReportCutoffLength = 500;

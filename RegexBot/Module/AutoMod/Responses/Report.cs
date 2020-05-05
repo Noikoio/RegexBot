@@ -33,7 +33,7 @@ namespace Noikoio.RegexBot.Module.AutoMod.Responses
             await target.SendMessageAsync("", embed: BuildReportEmbed(msg));
         }
 
-        private EmbedBuilder BuildReportEmbed(SocketMessage msg)
+        private Embed BuildReportEmbed(SocketMessage msg)
         {
             string invokeLine = msg.Content;
 
@@ -104,7 +104,7 @@ namespace Noikoio.RegexBot.Module.AutoMod.Responses
                 });
             }
             
-            return finalem;
+            return finalem.Build();
         }
     }
 }

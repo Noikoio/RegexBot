@@ -178,7 +178,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                         manageChannel: PermValue.Allow,
                         sendMessages: PermValue.Allow,
                         manageMessages: PermValue.Allow,
-                        managePermissions: PermValue.Allow));
+                        manageRoles: PermValue.Allow));
                 }
                 catch (Discord.Net.HttpException ex)
                 {
@@ -208,7 +208,7 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
                         manageChannel: PermValue.Allow,
                         sendMessages: PermValue.Allow,
                         manageMessages: PermValue.Allow,
-                        managePermissions: PermValue.Allow));
+                        manageRoles: PermValue.Allow));
                 }
                 catch (Discord.Net.HttpException ex)
                 {
