@@ -14,6 +14,7 @@ namespace Noikoio.RegexBot
         private static Configuration _config;
         private readonly DiscordSocketClient _client;
         private BotModule[] _modules;
+        private readonly AsyncLogger _dlog;
 
         internal static Configuration Config => _config;
         internal IEnumerable<BotModule> Modules => _modules;
@@ -48,7 +49,7 @@ namespace Noikoio.RegexBot
             });
 
             // Hook up basic handlers and other references
-            _client.Connected += _client_Connected;
+            _client.Connected += Client_Connected;
             EntityCache.EntityCache.SetClient(_client);
 
             // Initialize modules
@@ -68,11 +69,8 @@ namespace Noikoio.RegexBot
             };
 
             // Set up logging
-            var dlog = Logger.GetLogger("Discord.Net");
-            _client.Log += async (arg) =>
-                await dlog(
-                    String.Format("{0}: {1}{2}", arg.Source, ((int)arg.Severity < 3 ? arg.Severity + ": " : ""),
-                    arg.Message));
+            _dlog = Logger.GetLogger("Discord.Net");
+            _client.Log += Client_Log;
 
             // Finish loading configuration
             var conf = _config.ReloadServerConfig().Result;
@@ -96,7 +94,7 @@ namespace Noikoio.RegexBot
             await Task.Delay(-1);
         }
 
-        private async Task _client_Connected() => await _client.SetGameAsync(Config.CurrentGame);
+        private async Task Client_Connected() => await _client.SetGameAsync(Config.CurrentGame);
 
         // Defined within this class because a reference to the client is required
         public void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -110,6 +108,14 @@ namespace Noikoio.RegexBot
             Console.ReadLine();
 #endif
             Environment.Exit(0);
+        }
+
+        public async Task Client_Log(LogMessage arg)
+        {
+            await _dlog(
+                    String.Format("{0}: {1}{2}", arg.Source, ((int)arg.Severity < 3 ? arg.Severity + ": " : ""),
+                    arg.Message));
+            if (arg.Exception != null) await _dlog(arg.Exception.ToString());
         }
     }
 }
