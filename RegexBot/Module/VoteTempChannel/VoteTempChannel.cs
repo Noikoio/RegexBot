@@ -150,13 +150,6 @@ namespace Noikoio.RegexBot.Module.VoteTempChannel
 
             var newChannel = await g.CreateTextChannelAsync(newChannelName); // exceptions here are handled by caller
 
-            /*
-             * Here we attempt to set permissions on the temporary channel. We will attempt all items within
-             * the Roles and Users sections of the EntityList. Roles that are above us will not be processed
-             * with the assumption that they already have permissions anyway. Individual users will be assigned
-             * channel overrides.
-             */
-
             foreach (var item in newChannelModlist.Roles)
             {
                 // Evaluate role from data
