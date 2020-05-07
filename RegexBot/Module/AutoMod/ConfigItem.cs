@@ -157,6 +157,7 @@ namespace Noikoio.RegexBot.Module.AutoMod
             string msgcontent;
             if (MatchEmbed) msgcontent = SerializeEmbed(m.Embeds);
             else msgcontent = m.Content;
+            if (msgcontent == null) return false;
 
             // Min/max length check
             if (_msgMinLength != -1 && msgcontent.Length <= _msgMinLength) return false;
