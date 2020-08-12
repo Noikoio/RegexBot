@@ -132,9 +132,7 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
             {
                 string reasonlog = $"Invoked by {msg.Author.ToString()}.";
                 if (reason != null) reasonlog += $" Reason: {reason}";
-                reasonlog = Uri.EscapeDataString(reasonlog);
                 await notifyTask;
-#warning Remove EscapeDataString call on next Discord.Net update
 #if !DEBUG
                 if (_mode == CommandMode.Ban) await g.AddBanAsync(targetId, _purgeDays, reasonlog);
                 else await targetobj.KickAsync(reasonlog);

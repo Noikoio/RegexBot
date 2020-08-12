@@ -21,8 +21,7 @@ namespace Noikoio.RegexBot.Module.AutoMod.Responses
         public override async Task Invoke(SocketMessage msg)
         {
             var target = (SocketGuildUser)msg.Author;
-            await target.KickAsync(Uri.EscapeDataString($"Rule '{Rule.Label}'"));
-#warning Remove EscapeDataString call on next Discord.Net update
+            await target.KickAsync($"Rule '{Rule.Label}'");
         }
     }
 }
