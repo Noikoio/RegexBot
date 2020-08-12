@@ -124,6 +124,20 @@ namespace Noikoio.RegexBot.Module.ModCommands.Commands
                 return;
             }
 
+            // Hierarchy check
+            if ((msg.Author as SocketGuildUser).Hierarchy <= targetobj.Hierarchy)
+            {
+                // Block kick attempts if the invoking user is at or above the target in role hierarchy
+                await SendUsageMessageAsync(msg.Channel, ":x: You are not allowed to kick this user.");
+                return;
+            }
+            // Bot check
+            if (targetobj.IsBot)
+            {
+                await SendUsageMessageAsync(msg.Channel, ":x: I will not do that. Please kick bots manually.");
+                return;
+            }
+
             // Send out message
             var notifyTask = SendNotificationMessage(targetobj, reason);
 

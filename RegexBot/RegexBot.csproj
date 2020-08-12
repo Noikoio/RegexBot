@@ -7,7 +7,7 @@
     <Description>Highly configurable Discord moderation bot</Description>
     <Authors>Noikoio</Authors>
     <Company />
-    <Version>2.6.5</Version>
+    <Version>2.6.6</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
